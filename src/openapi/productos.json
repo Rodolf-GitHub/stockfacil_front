@@ -6,6 +6,41 @@
     "description": ""
   },
   "paths": {
+    "/api/productos/crear": {
+      "post": {
+        "operationId": "producto_api_crear_producto",
+        "summary": "Crear Producto",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductoSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Productos"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductoCreateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
     "/api/productos/listar": {
       "get": {
         "operationId": "producto_api_listar_productos",
@@ -146,42 +181,6 @@
   },
   "components": {
     "schemas": {
-      "Input": {
-        "properties": {
-          "limit": {
-            "default": 100,
-            "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
-          },
-          "offset": {
-            "default": 0,
-            "minimum": 0,
-            "title": "Offset",
-            "type": "integer"
-          }
-        },
-        "title": "Input",
-        "type": "object"
-      },
-      "PagedProductoSchema": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ProductoSchema"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "count": {
-            "title": "Count",
-            "type": "integer"
-          }
-        },
-        "required": ["items", "count"],
-        "title": "PagedProductoSchema",
-        "type": "object"
-      },
       "ProductoSchema": {
         "properties": {
           "id": {
@@ -222,6 +221,57 @@
         },
         "required": ["created_at", "updated_at", "nombre", "precio", "cuenta"],
         "title": "ProductoSchema",
+        "type": "object"
+      },
+      "ProductoCreateSchema": {
+        "properties": {
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          },
+          "precio": {
+            "title": "Precio",
+            "type": "number"
+          }
+        },
+        "required": ["nombre", "precio"],
+        "title": "ProductoCreateSchema",
+        "type": "object"
+      },
+      "Input": {
+        "properties": {
+          "limit": {
+            "default": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "title": "Input",
+        "type": "object"
+      },
+      "PagedProductoSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductoSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "count"],
+        "title": "PagedProductoSchema",
         "type": "object"
       },
       "ProductoUpdateSchema": {

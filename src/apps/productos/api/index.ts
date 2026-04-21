@@ -7,9 +7,53 @@
 import type {
   PagedProductoSchema,
   ProductoApiListarProductosParams,
+  ProductoCreateSchema,
   ProductoSchema,
   ProductoUpdateSchema
 } from './schemas';
+
+/**
+ * @summary Crear Producto
+ */
+export type productoApiCrearProductoResponse200 = {
+  data: ProductoSchema
+  status: 200
+}
+    
+export type productoApiCrearProductoResponseSuccess = (productoApiCrearProductoResponse200) & {
+  headers: Headers;
+};
+;
+
+export type productoApiCrearProductoResponse = (productoApiCrearProductoResponseSuccess)
+
+export const getProductoApiCrearProductoUrl = () => {
+
+
+  
+
+  return `/api/productos/crear`
+}
+
+export const productoApiCrearProducto = async (productoCreateSchema: ProductoCreateSchema, options?: RequestInit): Promise<productoApiCrearProductoResponse> => {
+  
+  const res = await fetch(getProductoApiCrearProductoUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      productoCreateSchema,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: productoApiCrearProductoResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as productoApiCrearProductoResponse
+}
+
+
 
 /**
  * @summary Listar Productos

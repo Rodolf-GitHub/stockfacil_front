@@ -16,6 +16,7 @@ export * from './pagedLocalSchema';
 export * from './pagedProductoSchema';
 export * from './pagedUsuarioConLocalesSchema';
 export * from './productoApiListarProductosParams';
+export * from './productoCreateSchema';
 export * from './productoSchema';
 export * from './productoUpdateSchema';
 export * from './usuarioConLocalesSchema';
