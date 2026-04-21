@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { Package, Pencil, Search, Trash2 } from 'lucide-vue-next'
+import { Package, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
 import {
   productoApiActualizarProducto,
+  productoApiCrearProducto,
   productoApiEliminarProducto,
   productoApiListarProductos,
 } from '@/apps/productos/api'
@@ -25,6 +26,7 @@ const busqueda = ref('')
 const cargando = ref(false)
 
 const showFormModal = ref(false)
+const modoEditar = ref(false)
 const productoSeleccionado = ref<ProductoSchema | null>(null)
 const nombreForm = ref('')
 const precioForm = ref('')
@@ -63,7 +65,16 @@ watch(busqueda, () => {
 watch(offset, cargar)
 onMounted(cargar)
 
+const abrirCrear = () => {
+  modoEditar.value = false
+  productoSeleccionado.value = null
+  nombreForm.value = ''
+  precioForm.value = ''
+  showFormModal.value = true
+}
+
 const abrirEditar = (p: ProductoSchema) => {
+  modoEditar.value = true
   productoSeleccionado.value = p
   nombreForm.value = p.nombre
   precioForm.value = p.precio
@@ -76,7 +87,7 @@ const abrirEliminar = (p: ProductoSchema) => {
 }
 
 const guardar = async () => {
-  if (!productoSeleccionado.value?.id || !nombreForm.value.trim()) return
+  if (!nombreForm.value.trim()) return
   const precioNum = Number(precioForm.value)
   if (Number.isNaN(precioNum) || precioNum < 0) {
     notifyError('Precio inválido')
@@ -84,15 +95,27 @@ const guardar = async () => {
   }
   guardando.value = true
   try {
-    const res = await productoApiActualizarProducto(
-      productoSeleccionado.value.id,
-      { nombre: nombreForm.value.trim(), precio: precioNum },
-      authOptions(),
-    )
-    if (res.status >= 200 && res.status < 300) {
-      success('Producto actualizado correctamente')
-      showFormModal.value = false
-      await cargar()
+    if (modoEditar.value && productoSeleccionado.value?.id) {
+      const res = await productoApiActualizarProducto(
+        productoSeleccionado.value.id,
+        { nombre: nombreForm.value.trim(), precio: precioNum },
+        authOptions(),
+      )
+      if (res.status >= 200 && res.status < 300) {
+        success('Producto actualizado correctamente')
+        showFormModal.value = false
+        await cargar()
+      }
+    } else {
+      const res = await productoApiCrearProducto(
+        { nombre: nombreForm.value.trim(), precio: precioNum },
+        authOptions(),
+      )
+      if (res.status >= 200 && res.status < 300) {
+        success('Producto creado correctamente')
+        showFormModal.value = false
+        await cargar()
+      }
     }
   } catch {
     notifyError('Error al guardar el producto')
@@ -142,6 +165,14 @@ const formatPrecio = (precio: string) => {
           </p>
         </div>
       </div>
+      <button
+        type="button"
+        @click="abrirCrear"
+        class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-amber-600 shadow-sm transition-all hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/50"
+      >
+        <Plus :size="18" />
+        Nuevo producto
+      </button>
     </div>
 
     <div class="rounded-2xl border border-[var(--bg-300)]/50 bg-white shadow-sm">
@@ -286,7 +317,12 @@ const formatPrecio = (precio: string) => {
     </div>
   </div>
 
-  <BaseModal :show="showFormModal" title="Editar producto" size="sm" @close="showFormModal = false">
+  <BaseModal
+    :show="showFormModal"
+    :title="modoEditar ? 'Editar producto' : 'Nuevo producto'"
+    size="sm"
+    @close="showFormModal = false"
+  >
     <form class="space-y-4" @submit.prevent="guardar">
       <BaseInput v-model="nombreForm" label="Nombre" placeholder="Nombre del producto" required />
       <div class="w-full">
@@ -307,7 +343,7 @@ const formatPrecio = (precio: string) => {
     <template #footer>
       <BaseButton variant="secondary" @click="showFormModal = false">Cancelar</BaseButton>
       <BaseButton :loading="guardando" :disabled="!nombreForm.trim()" @click="guardar">
-        Guardar cambios
+        {{ modoEditar ? 'Guardar cambios' : 'Crear producto' }}
       </BaseButton>
     </template>
   </BaseModal>
