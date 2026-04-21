@@ -124,25 +124,21 @@ const handleLogout = () => {
       ]"
     >
       <div class="h-full overflow-y-auto bg-gradient-to-b from-white to-[var(--bg-100)] px-3 pb-4">
-        <ul class="space-y-2 font-medium">
+        <ul class="space-y-1.5 font-medium">
           <!-- Dashboard -->
           <li>
             <RouterLink
               @click="closeSidebarOnMobile"
               to="/dashboard"
-              class="flex items-start gap-3 rounded-lg p-3 text-[var(--text-100)] hover:bg-[var(--primary-100)] hover:text-white transition-all group"
-              active-class="bg-[var(--primary-100)] text-white shadow-md"
+              class="nav-link"
+              active-class="nav-link-active"
             >
-              <span
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary-100)]/15 text-[var(--primary-100)] group-hover:bg-white/20 group-hover:text-white"
-              >
+              <span class="nav-icon bg-indigo-100 text-indigo-600">
                 <LayoutDashboard class="h-5 w-5" :stroke-width="2" />
               </span>
               <span class="flex flex-col">
                 <span class="text-sm font-semibold">Dashboard</span>
-                <span class="text-xs text-[var(--text-200)] group-hover:text-white/80">
-                  Resumen general
-                </span>
+                <span class="text-xs text-[var(--text-200)]">Resumen general</span>
               </span>
             </RouterLink>
           </li>
@@ -152,19 +148,15 @@ const handleLogout = () => {
             <RouterLink
               @click="closeSidebarOnMobile"
               to="/productos"
-              class="flex items-start gap-3 rounded-lg p-3 text-[var(--text-100)] hover:bg-[var(--accent-100)] hover:text-white transition-all group"
-              active-class="bg-[var(--accent-100)] text-white shadow-md"
+              class="nav-link"
+              active-class="nav-link-active"
             >
-              <span
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-700 group-hover:bg-white/20 group-hover:text-white"
-              >
+              <span class="nav-icon bg-amber-100 text-amber-600">
                 <Package class="h-5 w-5" :stroke-width="2" />
               </span>
               <span class="flex flex-col">
                 <span class="text-sm font-semibold">Productos</span>
-                <span class="text-xs text-[var(--text-200)] group-hover:text-white/80">
-                  Catálogo y stock
-                </span>
+                <span class="text-xs text-[var(--text-200)]">Catálogo y stock</span>
               </span>
             </RouterLink>
           </li>
@@ -174,19 +166,15 @@ const handleLogout = () => {
             <RouterLink
               @click="closeSidebarOnMobile"
               to="/locales"
-              class="flex items-start gap-3 rounded-lg p-3 text-[var(--text-100)] hover:bg-[var(--primary-200)] hover:text-white transition-all group"
-              active-class="bg-[var(--primary-200)] text-white shadow-md"
+              class="nav-link"
+              active-class="nav-link-active"
             >
-              <span
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary-100)]/15 text-[var(--primary-100)] group-hover:bg-white/20 group-hover:text-white"
-              >
+              <span class="nav-icon bg-emerald-100 text-emerald-600">
                 <MapPin class="h-5 w-5" :stroke-width="2" />
               </span>
               <span class="flex flex-col">
                 <span class="text-sm font-semibold">Locales</span>
-                <span class="text-xs text-[var(--text-200)] group-hover:text-white/80">
-                  Gestión de sucursales
-                </span>
+                <span class="text-xs text-[var(--text-200)]">Gestión de sucursales</span>
               </span>
             </RouterLink>
           </li>
@@ -196,19 +184,15 @@ const handleLogout = () => {
             <RouterLink
               @click="closeSidebarOnMobile"
               to="/usuarios"
-              class="flex items-start gap-3 rounded-lg p-3 text-[var(--text-100)] hover:bg-[var(--primary-100)] hover:text-white transition-all group"
-              active-class="bg-[var(--primary-100)] text-white shadow-md"
+              class="nav-link"
+              active-class="nav-link-active"
             >
-              <span
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary-100)]/15 text-[var(--primary-100)] group-hover:bg-white/20 group-hover:text-white"
-              >
+              <span class="nav-icon bg-violet-100 text-violet-600">
                 <Users class="h-5 w-5" :stroke-width="2" />
               </span>
               <span class="flex flex-col">
                 <span class="text-sm font-semibold">Usuarios</span>
-                <span class="text-xs text-[var(--text-200)] group-hover:text-white/80">
-                  Gestión de cuentas
-                </span>
+                <span class="text-xs text-[var(--text-200)]">Gestión de cuentas</span>
               </span>
             </RouterLink>
           </li>
@@ -235,4 +219,50 @@ const handleLogout = () => {
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  color: var(--text-100);
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.nav-link:hover {
+  background-color: var(--bg-200);
+}
+
+.nav-link-active {
+  background-color: color-mix(in srgb, var(--primary-100) 12%, white) !important;
+  color: var(--primary-100) !important;
+  font-weight: 600;
+}
+
+.nav-link-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background-color: var(--primary-100);
+}
+
+.nav-link-active :deep(.text-\[var\(--text-200\)\]) {
+  color: color-mix(in srgb, var(--primary-100) 70%, var(--text-200));
+}
+
+.nav-icon {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+}
+</style>
