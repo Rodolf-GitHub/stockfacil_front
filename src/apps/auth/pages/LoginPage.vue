@@ -152,7 +152,7 @@ const handleLogin = async () => {
       localStorage.setItem('user_email', response.data.email)
       localStorage.setItem('user_id', String(response.data.usuario_id))
       localStorage.setItem('es_admin', String(response.data.es_admin))
-      await router.push('/app')
+      await router.push('/dashboard')
       return
     }
 

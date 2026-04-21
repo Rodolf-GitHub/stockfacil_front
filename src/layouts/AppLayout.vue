@@ -2,27 +2,22 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  Menu,
-  ShoppingCart,
-  CalendarDays,
-  Package,
-  Store,
-  User,
+  LayoutDashboard,
   LogOut,
+  MapPin,
+  Menu,
+  Package,
+  User,
   UserCircle,
   Users,
-  HelpCircle,
 } from 'lucide-vue-next'
 
 const router = useRouter()
 const sidebarOpen = ref(false)
 const userMenuOpen = ref(false)
 
-const userName = ref(localStorage.getItem('user_name') || 'Usuario')
-const userRole = ref(localStorage.getItem('user_role') || 'usuario')
-
-const isAdminRole = () => userRole.value === 'admin'
-const isVerdulero = () => userRole.value === 'verdulero'
+const userEmail = ref(localStorage.getItem('user_email') || 'Usuario')
+const esAdmin = ref(localStorage.getItem('es_admin') === 'true')
 
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value
@@ -39,7 +34,7 @@ const closeSidebarOnMobile = () => {
 }
 
 const handleLogout = () => {
-  localStorage.removeItem('auth_token')
+  localStorage.clear()
   router.push('/')
 }
 </script>
@@ -61,10 +56,10 @@ const handleLogout = () => {
               <span class="sr-only">Open sidebar</span>
               <Menu :size="24" />
             </button>
-            <RouterLink to="/ayuda" class="ms-2 flex md:me-24">
+            <RouterLink to="/dashboard" class="ms-2 flex md:me-24">
               <span
                 class="self-center whitespace-nowrap text-lg sm:text-xl font-bold text-white md:text-2xl"
-                >🥬 Verdulería</span
+                >📦 StockFácil</span
               >
             </RouterLink>
           </div>
@@ -92,8 +87,10 @@ const handleLogout = () => {
                 >
                   <div class="py-1">
                     <div class="px-4 py-3 border-b border-[var(--bg-300)]">
-                      <p class="text-sm font-semibold text-[var(--text-100)]">{{ userName }}</p>
-                      <p class="text-xs text-[var(--text-200)] capitalize">{{ userRole }}</p>
+                      <p class="text-sm font-semibold text-[var(--text-100)]">{{ userEmail }}</p>
+                      <p class="text-xs text-[var(--text-200)]">
+                        {{ esAdmin ? 'Administrador' : 'Usuario' }}
+                      </p>
                     </div>
                     <a
                       href="#"
@@ -128,66 +125,29 @@ const handleLogout = () => {
     >
       <div class="h-full overflow-y-auto bg-gradient-to-b from-white to-[var(--bg-100)] px-3 pb-4">
         <ul class="space-y-2 font-medium">
-          <li v-if="isAdminRole()">
-            <RouterLink
-              @click="closeSidebarOnMobile"
-              to="/usuarios"
-              class="flex items-start gap-3 rounded-lg p-3 text-[var(--text-100)] hover:bg-purple-100 hover:text-white transition-all group"
-              active-class="bg-purple-500 text-white shadow-md"
-            >
-              <span
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100 text-purple-700 group-hover:bg-white/20 group-hover:text-white"
-              >
-                <Users class="h-5 w-5" :stroke-width="2" />
-              </span>
-              <span class="flex flex-col">
-                <span class="text-sm font-semibold">Usuarios</span>
-                <span class="text-xs text-[var(--text-200)] group-hover:text-white/80">
-                  Gestiona cuentas y roles
-                </span>
-              </span>
-            </RouterLink>
-          </li>
+          <!-- Dashboard -->
           <li>
             <RouterLink
               @click="closeSidebarOnMobile"
-              to="/pedidos"
+              to="/dashboard"
               class="flex items-start gap-3 rounded-lg p-3 text-[var(--text-100)] hover:bg-[var(--primary-100)] hover:text-white transition-all group"
               active-class="bg-[var(--primary-100)] text-white shadow-md"
             >
               <span
                 class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary-100)]/15 text-[var(--primary-100)] group-hover:bg-white/20 group-hover:text-white"
               >
-                <ShoppingCart class="h-5 w-5" :stroke-width="2" />
+                <LayoutDashboard class="h-5 w-5" :stroke-width="2" />
               </span>
               <span class="flex flex-col">
-                <span class="text-sm font-semibold">Pedidos</span>
+                <span class="text-sm font-semibold">Dashboard</span>
                 <span class="text-xs text-[var(--text-200)] group-hover:text-white/80">
-                  Lista y estado de pedidos
+                  Resumen general
                 </span>
               </span>
             </RouterLink>
           </li>
-          <li v-if="!isVerdulero()">
-            <RouterLink
-              @click="closeSidebarOnMobile"
-              to="/pedidos-diarios"
-              class="flex items-start gap-3 rounded-lg p-3 text-[var(--text-100)] hover:bg-[var(--primary-200)] hover:text-white transition-all group"
-              active-class="bg-[var(--primary-200)] text-white shadow-md"
-            >
-              <span
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-700 group-hover:bg-white/20 group-hover:text-white"
-              >
-                <CalendarDays class="h-5 w-5" :stroke-width="2" />
-              </span>
-              <span class="flex flex-col">
-                <span class="text-sm font-semibold">Compras</span>
-                <span class="text-xs text-[var(--text-200)] group-hover:text-white/80">
-                  Control diario de compras
-                </span>
-              </span>
-            </RouterLink>
-          </li>
+
+          <!-- Productos -->
           <li>
             <RouterLink
               @click="closeSidebarOnMobile"
@@ -203,53 +163,56 @@ const handleLogout = () => {
               <span class="flex flex-col">
                 <span class="text-sm font-semibold">Productos</span>
                 <span class="text-xs text-[var(--text-200)] group-hover:text-white/80">
-                  Catalogo y precios
+                  Catálogo y stock
                 </span>
               </span>
             </RouterLink>
           </li>
-          <li v-if="isAdminRole()">
+
+          <!-- Locales -->
+          <li>
             <RouterLink
               @click="closeSidebarOnMobile"
-              to="/negocios"
+              to="/locales"
               class="flex items-start gap-3 rounded-lg p-3 text-[var(--text-100)] hover:bg-[var(--primary-200)] hover:text-white transition-all group"
               active-class="bg-[var(--primary-200)] text-white shadow-md"
             >
               <span
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-100 text-teal-700 group-hover:bg-white/20 group-hover:text-white"
+                class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary-100)]/15 text-[var(--primary-100)] group-hover:bg-white/20 group-hover:text-white"
               >
-                <Store class="h-5 w-5" :stroke-width="2" />
+                <MapPin class="h-5 w-5" :stroke-width="2" />
               </span>
               <span class="flex flex-col">
-                <span class="text-sm font-semibold">Negocios</span>
+                <span class="text-sm font-semibold">Locales</span>
                 <span class="text-xs text-[var(--text-200)] group-hover:text-white/80">
-                  Administra locales
+                  Gestión de sucursales
+                </span>
+              </span>
+            </RouterLink>
+          </li>
+
+          <!-- Usuarios (solo admin) -->
+          <li v-if="esAdmin">
+            <RouterLink
+              @click="closeSidebarOnMobile"
+              to="/usuarios"
+              class="flex items-start gap-3 rounded-lg p-3 text-[var(--text-100)] hover:bg-[var(--primary-100)] hover:text-white transition-all group"
+              active-class="bg-[var(--primary-100)] text-white shadow-md"
+            >
+              <span
+                class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary-100)]/15 text-[var(--primary-100)] group-hover:bg-white/20 group-hover:text-white"
+              >
+                <Users class="h-5 w-5" :stroke-width="2" />
+              </span>
+              <span class="flex flex-col">
+                <span class="text-sm font-semibold">Usuarios</span>
+                <span class="text-xs text-[var(--text-200)] group-hover:text-white/80">
+                  Gestión de cuentas
                 </span>
               </span>
             </RouterLink>
           </li>
         </ul>
-
-        <div class="mt-6 border-t border-[var(--bg-300)] pt-4">
-          <RouterLink
-            @click="closeSidebarOnMobile"
-            to="/ayuda"
-            class="flex items-start gap-3 rounded-lg p-3 text-[var(--text-100)] hover:bg-[var(--bg-200)] hover:text-[var(--primary-100)] transition-all group"
-            active-class="bg-[var(--bg-200)] text-[var(--primary-100)] shadow-sm"
-          >
-            <span
-              class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--bg-200)] text-[var(--text-200)] group-hover:bg-white group-hover:text-[var(--primary-100)]"
-            >
-              <HelpCircle class="h-5 w-5" :stroke-width="2" />
-            </span>
-            <span class="flex flex-col">
-              <span class="text-sm font-semibold">Ayuda</span>
-              <span class="text-xs text-[var(--text-200)] group-hover:text-[var(--primary-100)]">
-                Guia rapida de uso
-              </span>
-            </span>
-          </RouterLink>
-        </div>
       </div>
     </aside>
 
