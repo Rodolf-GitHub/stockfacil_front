@@ -1,0 +1,347 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NinjaAPI",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "paths": {
+    "/api/usuarios/listar": {
+      "get": {
+        "operationId": "usuario_api_listar_usuarios",
+        "summary": "Listar Usuarios",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "busqueda",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Busqueda"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedUsuarioSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Usuarios"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/usuarios/crear": {
+      "post": {
+        "operationId": "usuario_api_crear_usuario",
+        "summary": "Crear Usuario",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Usuarios"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioCreateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/usuarios/eliminar/{usuario_id}": {
+      "delete": {
+        "operationId": "usuario_api_eliminar_usuario",
+        "summary": "Eliminar Usuario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "usuario_id",
+            "schema": {
+              "title": "Usuario Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": ["Usuarios"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/usuarios/restablecer_contrasena/{usuario_id}": {
+      "put": {
+        "operationId": "usuario_api_restablecer_contrasena_usuario",
+        "summary": "Restablecer Contrasena Usuario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "usuario_id",
+            "schema": {
+              "title": "Usuario Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Usuarios"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioRestablecerContrasenaSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/usuarios/cambiar_mi_contrasena": {
+      "put": {
+        "operationId": "usuario_api_cambiar_mi_contrasena",
+        "summary": "Cambiar Mi Contrasena",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Usuarios"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioCambiarMiContrasenaSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Input": {
+        "properties": {
+          "limit": {
+            "default": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "title": "Input",
+        "type": "object"
+      },
+      "PagedUsuarioSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UsuarioSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "count"],
+        "title": "PagedUsuarioSchema",
+        "type": "object"
+      },
+      "UsuarioSchema": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "ID"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "cuenta": {
+            "title": "Cuenta",
+            "type": "integer"
+          },
+          "email": {
+            "maxLength": 255,
+            "title": "Email",
+            "type": "string"
+          },
+          "es_admin": {
+            "default": false,
+            "title": "Es Admin",
+            "type": "boolean"
+          }
+        },
+        "required": ["created_at", "updated_at", "cuenta", "email"],
+        "title": "UsuarioSchema",
+        "type": "object"
+      },
+      "UsuarioCreateSchema": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": ["email", "password"],
+        "title": "UsuarioCreateSchema",
+        "type": "object"
+      },
+      "UsuarioRestablecerContrasenaSchema": {
+        "properties": {
+          "nueva_password": {
+            "title": "Nueva Password",
+            "type": "string"
+          }
+        },
+        "required": ["nueva_password"],
+        "title": "UsuarioRestablecerContrasenaSchema",
+        "type": "object"
+      },
+      "UsuarioCambiarMiContrasenaSchema": {
+        "properties": {
+          "password_actual": {
+            "title": "Password Actual",
+            "type": "string"
+          },
+          "nueva_password": {
+            "title": "Nueva Password",
+            "type": "string"
+          }
+        },
+        "required": ["password_actual", "nueva_password"],
+        "title": "UsuarioCambiarMiContrasenaSchema",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "AuthBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "servers": []
+}

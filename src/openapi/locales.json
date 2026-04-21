@@ -1,0 +1,502 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NinjaAPI",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "paths": {
+    "/api/locales/listar": {
+      "get": {
+        "operationId": "local_api_listar_locales",
+        "summary": "Listar Locales",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "busqueda",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Busqueda"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedLocalSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Locales"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/locales/crear": {
+      "post": {
+        "operationId": "local_api_crear_local",
+        "summary": "Crear Local",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Locales"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalCreateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/locales/actualizar/{local_id}": {
+      "put": {
+        "operationId": "local_api_actualizar_local",
+        "summary": "Actualizar Local",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "local_id",
+            "schema": {
+              "title": "Local Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Locales"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalUpdateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/locales/eliminar/{local_id}": {
+      "delete": {
+        "operationId": "local_api_eliminar_local",
+        "summary": "Eliminar Local",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "local_id",
+            "schema": {
+              "title": "Local Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": ["Locales"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/locales/usuario-local/listar": {
+      "get": {
+        "operationId": "local_usuario_local_api_listar_usuarios_con_locales",
+        "summary": "Listar Usuarios Con Locales",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedUsuarioConLocalesSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Usuario Local"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/locales/usuario-local/asignar/{usuario_id}": {
+      "post": {
+        "operationId": "local_usuario_local_api_asignar_local_a_usuario",
+        "summary": "Asignar Local A Usuario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "usuario_id",
+            "schema": {
+              "title": "Usuario Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioConLocalesSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Usuario Local"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioLocalPayloadSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/locales/usuario-local/desasignar/{usuario_id}": {
+      "post": {
+        "operationId": "local_usuario_local_api_desasignar_local_a_usuario",
+        "summary": "Desasignar Local A Usuario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "usuario_id",
+            "schema": {
+              "title": "Usuario Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioConLocalesSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Usuario Local"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioLocalPayloadSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Input": {
+        "properties": {
+          "limit": {
+            "default": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "title": "Input",
+        "type": "object"
+      },
+      "LocalSchema": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "ID"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "nombre": {
+            "maxLength": 255,
+            "title": "Nombre",
+            "type": "string"
+          },
+          "cuenta": {
+            "title": "Cuenta",
+            "type": "integer"
+          }
+        },
+        "required": ["created_at", "updated_at", "nombre", "cuenta"],
+        "title": "LocalSchema",
+        "type": "object"
+      },
+      "PagedLocalSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LocalSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "count"],
+        "title": "PagedLocalSchema",
+        "type": "object"
+      },
+      "LocalCreateSchema": {
+        "properties": {
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          }
+        },
+        "required": ["nombre"],
+        "title": "LocalCreateSchema",
+        "type": "object"
+      },
+      "LocalUpdateSchema": {
+        "properties": {
+          "nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          }
+        },
+        "title": "LocalUpdateSchema",
+        "type": "object"
+      },
+      "LocalAsignadoSchema": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          }
+        },
+        "required": ["id", "nombre"],
+        "title": "LocalAsignadoSchema",
+        "type": "object"
+      },
+      "PagedUsuarioConLocalesSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UsuarioConLocalesSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "count"],
+        "title": "PagedUsuarioConLocalesSchema",
+        "type": "object"
+      },
+      "UsuarioConLocalesSchema": {
+        "properties": {
+          "usuario_id": {
+            "title": "Usuario Id",
+            "type": "integer"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "es_admin": {
+            "title": "Es Admin",
+            "type": "boolean"
+          },
+          "locales": {
+            "items": {
+              "$ref": "#/components/schemas/LocalAsignadoSchema"
+            },
+            "title": "Locales",
+            "type": "array"
+          }
+        },
+        "required": ["usuario_id", "email", "es_admin", "locales"],
+        "title": "UsuarioConLocalesSchema",
+        "type": "object"
+      },
+      "UsuarioLocalPayloadSchema": {
+        "properties": {
+          "local_id": {
+            "title": "Local Id",
+            "type": "integer"
+          }
+        },
+        "required": ["local_id"],
+        "title": "UsuarioLocalPayloadSchema",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "AuthBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "servers": []
+}
