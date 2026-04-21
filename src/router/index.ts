@@ -4,6 +4,7 @@ import LoginPage from '@/apps/auth/pages/LoginPage.vue'
 import DashboardPage from '@/apps/dashboard/pages/DashboardPage.vue'
 import ProductosPage from '@/apps/productos/pages/ProductosPage.vue'
 import LocalesPage from '@/apps/locales/pages/LocalesPage.vue'
+import AsignacionesPage from '@/apps/locales/pages/AsignacionesPage.vue'
 import UsuariosPage from '@/apps/usuarios/pages/UsuariosPage.vue'
 
 const router = createRouter({
@@ -37,6 +38,11 @@ const router = createRouter({
           path: '/usuarios',
           name: 'usuarios',
           component: UsuariosPage,
+        },
+        {
+          path: '/asignaciones',
+          name: 'asignaciones',
+          component: AsignacionesPage,
         },
       ],
     },

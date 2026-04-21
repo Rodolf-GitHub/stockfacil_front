@@ -2,15 +2,21 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
+  KeyRound,
   LayoutDashboard,
+  Link2,
   LogOut,
   MapPin,
   Menu,
   Package,
   User,
-  UserCircle,
   Users,
 } from 'lucide-vue-next'
+import BaseButton from '@/components/BaseButton.vue'
+import BaseInput from '@/components/BaseInput.vue'
+import BaseModal from '@/components/BaseModal.vue'
+import { usuarioApiCambiarMiContrasena } from '@/apps/usuarios/api'
+import { useNotification } from '@/composables/useNotification'
 
 const router = useRouter()
 const sidebarOpen = ref(false)
@@ -36,6 +42,41 @@ const closeSidebarOnMobile = () => {
 const handleLogout = () => {
   localStorage.clear()
   router.push('/')
+}
+
+// --- Cambiar mi contraseña ---
+const { success, error: notifyError } = useNotification()
+const showPasswordModal = ref(false)
+const passwordActual = ref('')
+const nuevaPassword = ref('')
+const cambiandoPassword = ref(false)
+
+const abrirCambiarPassword = () => {
+  passwordActual.value = ''
+  nuevaPassword.value = ''
+  userMenuOpen.value = false
+  showPasswordModal.value = true
+}
+
+const cambiarPassword = async () => {
+  if (!passwordActual.value || !nuevaPassword.value) return
+  cambiandoPassword.value = true
+  try {
+    const res = await usuarioApiCambiarMiContrasena(
+      { password_actual: passwordActual.value, nueva_password: nuevaPassword.value },
+      { headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } },
+    )
+    if (res.status >= 200 && res.status < 300) {
+      success('Contraseña actualizada correctamente')
+      showPasswordModal.value = false
+    } else {
+      notifyError('Contraseña actual incorrecta')
+    }
+  } catch {
+    notifyError('Error al cambiar la contraseña')
+  } finally {
+    cambiandoPassword.value = false
+  }
 }
 </script>
 
@@ -92,13 +133,14 @@ const handleLogout = () => {
                         {{ esAdmin ? 'Administrador' : 'Usuario' }}
                       </p>
                     </div>
-                    <a
-                      href="#"
-                      class="flex items-center px-4 py-2 text-sm text-[var(--text-100)] hover:bg-[var(--bg-200)] transition-colors"
+                    <button
+                      type="button"
+                      @click="abrirCambiarPassword"
+                      class="flex w-full items-center px-4 py-2 text-sm text-[var(--text-100)] hover:bg-[var(--bg-200)] transition-colors"
                     >
-                      <UserCircle class="mr-3 h-5 w-5 text-[var(--text-200)]" :stroke-width="2" />
-                      Mi Perfil
-                    </a>
+                      <KeyRound class="mr-3 h-5 w-5 text-[var(--text-200)]" :stroke-width="2" />
+                      Cambiar contraseña
+                    </button>
                     <hr class="my-1 border-[var(--bg-300)]" />
                     <button
                       @click="handleLogout"
@@ -196,6 +238,24 @@ const handleLogout = () => {
               </span>
             </RouterLink>
           </li>
+
+          <!-- Asignaciones (solo admin) -->
+          <li v-if="esAdmin">
+            <RouterLink
+              @click="closeSidebarOnMobile"
+              to="/asignaciones"
+              class="nav-link"
+              active-class="nav-link-active"
+            >
+              <span class="nav-icon bg-rose-100 text-rose-600">
+                <Link2 class="h-5 w-5" :stroke-width="2" />
+              </span>
+              <span class="flex flex-col">
+                <span class="text-sm font-semibold">Asignaciones</span>
+                <span class="text-xs text-[var(--text-200)]">Usuarios y locales</span>
+              </span>
+            </RouterLink>
+          </li>
         </ul>
       </div>
     </aside>
@@ -216,6 +276,41 @@ const handleLogout = () => {
 
     <!-- Backdrop for user menu -->
     <div v-if="userMenuOpen" @click="toggleUserMenu" class="fixed inset-0 z-40"></div>
+
+    <!-- Modal cambiar contraseña -->
+    <BaseModal
+      :show="showPasswordModal"
+      title="Cambiar mi contraseña"
+      size="sm"
+      @close="showPasswordModal = false"
+    >
+      <form class="space-y-4" @submit.prevent="cambiarPassword">
+        <BaseInput
+          v-model="passwordActual"
+          type="password"
+          label="Contraseña actual"
+          placeholder="Tu contraseña actual"
+          required
+        />
+        <BaseInput
+          v-model="nuevaPassword"
+          type="password"
+          label="Nueva contraseña"
+          placeholder="Nueva contraseña"
+          required
+        />
+      </form>
+      <template #footer>
+        <BaseButton variant="secondary" @click="showPasswordModal = false">Cancelar</BaseButton>
+        <BaseButton
+          :loading="cambiandoPassword"
+          :disabled="!passwordActual || !nuevaPassword"
+          @click="cambiarPassword"
+        >
+          Actualizar contraseña
+        </BaseButton>
+      </template>
+    </BaseModal>
   </div>
 </template>
 

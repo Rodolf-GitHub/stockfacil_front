@@ -289,15 +289,20 @@ const formatPrecio = (precio: string) => {
   <BaseModal :show="showFormModal" title="Editar producto" size="sm" @close="showFormModal = false">
     <form class="space-y-4" @submit.prevent="guardar">
       <BaseInput v-model="nombreForm" label="Nombre" placeholder="Nombre del producto" required />
-      <BaseInput
-        v-model="precioForm"
-        type="number"
-        step="0.01"
-        min="0"
-        label="Precio"
-        placeholder="0.00"
-        required
-      />
+      <div class="w-full">
+        <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">
+          Precio <span class="text-red-500">*</span>
+        </label>
+        <input
+          v-model="precioForm"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="0.00"
+          required
+          class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+        />
+      </div>
     </form>
     <template #footer>
       <BaseButton variant="secondary" @click="showFormModal = false">Cancelar</BaseButton>
