@@ -1,11 +1,19 @@
 import { defineConfig } from 'orval'
 
 export default defineConfig({
-  usuarios: {
-    input: './src/openapi/usuarios.json',
+  auth: {
+    input: './src/openapi/auth.json',
     output: {
-      target: './src/apps/usuarios/api/index.ts',
-      schemas: './src/apps/usuarios/api/schemas',
+      target: './src/apps/auth/api/index.ts',
+      schemas: './src/apps/auth/api/schemas',
+      client: 'fetch',
+    },
+  },
+  locales: {
+    input: './src/openapi/locales.json',
+    output: {
+      target: './src/apps/locales/api/index.ts',
+      schemas: './src/apps/locales/api/schemas',
       client: 'fetch',
     },
   },
@@ -17,35 +25,11 @@ export default defineConfig({
       client: 'fetch',
     },
   },
-  pedidos: {
-    input: './src/openapi/pedidos.json',
+  usuarios: {
+    input: './src/openapi/usuarios.json',
     output: {
-      target: './src/apps/pedidos/api/index.ts',
-      schemas: './src/apps/pedidos/api/schemas',
-      client: 'fetch',
-    },
-  },
-  negocios: {
-    input: './src/openapi/negocios.json',
-    output: {
-      target: './src/apps/negocios/api/index.ts',
-      schemas: './src/apps/negocios/api/schemas',
-      client: 'fetch',
-    },
-  },
-  compras: {
-    input: './src/openapi/compras.json',
-    output: {
-      target: './src/apps/compras/api/index.ts',
-      schemas: './src/apps/compras/api/schemas',
-      client: 'fetch',
-    },
-  },
-  pedidos_diarios: {
-    input: './src/openapi/pedidos_diarios.json',
-    output: {
-      target: './src/apps/pedidos_diarios/api/index.ts',
-      schemas: './src/apps/pedidos_diarios/api/schemas',
+      target: './src/apps/usuarios/api/index.ts',
+      schemas: './src/apps/usuarios/api/schemas',
       client: 'fetch',
     },
   },
