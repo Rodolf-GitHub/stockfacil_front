@@ -5,33 +5,28 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
-  LocalApiListarLocalesParams,
-  LocalCreateSchema,
-  LocalSchema,
-  LocalUpdateSchema,
-  LocalUsuarioLocalApiListarUsuariosConLocalesParams,
-  PagedLocalSchema,
-  PagedUsuarioConLocalesSchema,
-  UsuarioConLocalesSchema,
-  UsuarioLocalPayloadSchema
+  PagedProductoSchema,
+  ProductoApiListarProductosParams,
+  ProductoSchema,
+  ProductoUpdateSchema
 } from './schemas';
 
 /**
- * @summary Listar Locales
+ * @summary Listar Productos
  */
-export type localApiListarLocalesResponse200 = {
-  data: PagedLocalSchema
+export type productoApiListarProductosResponse200 = {
+  data: PagedProductoSchema
   status: 200
 }
     
-export type localApiListarLocalesResponseSuccess = (localApiListarLocalesResponse200) & {
+export type productoApiListarProductosResponseSuccess = (productoApiListarProductosResponse200) & {
   headers: Headers;
 };
 ;
 
-export type localApiListarLocalesResponse = (localApiListarLocalesResponseSuccess)
+export type productoApiListarProductosResponse = (productoApiListarProductosResponseSuccess)
 
-export const getLocalApiListarLocalesUrl = (params?: LocalApiListarLocalesParams,) => {
+export const getProductoApiListarProductosUrl = (params?: ProductoApiListarProductosParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -43,12 +38,12 @@ export const getLocalApiListarLocalesUrl = (params?: LocalApiListarLocalesParams
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/locales/listar?${stringifiedParams}` : `/api/locales/listar`
+  return stringifiedParams.length > 0 ? `/api/productos/listar?${stringifiedParams}` : `/api/productos/listar`
 }
 
-export const localApiListarLocales = async (params?: LocalApiListarLocalesParams, options?: RequestInit): Promise<localApiListarLocalesResponse> => {
+export const productoApiListarProductos = async (params?: ProductoApiListarProductosParams, options?: RequestInit): Promise<productoApiListarProductosResponse> => {
   
-  const res = await fetch(getLocalApiListarLocalesUrl(params),
+  const res = await fetch(getProductoApiListarProductosUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -59,125 +54,82 @@ export const localApiListarLocales = async (params?: LocalApiListarLocalesParams
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
   
-  const data: localApiListarLocalesResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as localApiListarLocalesResponse
+  const data: productoApiListarProductosResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as productoApiListarProductosResponse
 }
 
 
 
 /**
- * @summary Crear Local
+ * @summary Actualizar Producto
  */
-export type localApiCrearLocalResponse200 = {
-  data: LocalSchema
+export type productoApiActualizarProductoResponse200 = {
+  data: ProductoSchema
   status: 200
 }
     
-export type localApiCrearLocalResponseSuccess = (localApiCrearLocalResponse200) & {
+export type productoApiActualizarProductoResponseSuccess = (productoApiActualizarProductoResponse200) & {
   headers: Headers;
 };
 ;
 
-export type localApiCrearLocalResponse = (localApiCrearLocalResponseSuccess)
+export type productoApiActualizarProductoResponse = (productoApiActualizarProductoResponseSuccess)
 
-export const getLocalApiCrearLocalUrl = () => {
+export const getProductoApiActualizarProductoUrl = (productoId: number,) => {
 
 
   
 
-  return `/api/locales/crear`
+  return `/api/productos/actualizar/${productoId}`
 }
 
-export const localApiCrearLocal = async (localCreateSchema: LocalCreateSchema, options?: RequestInit): Promise<localApiCrearLocalResponse> => {
+export const productoApiActualizarProducto = async (productoId: number,
+    productoUpdateSchema: ProductoUpdateSchema, options?: RequestInit): Promise<productoApiActualizarProductoResponse> => {
   
-  const res = await fetch(getLocalApiCrearLocalUrl(),
-  {      
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      localCreateSchema,)
-  }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: localApiCrearLocalResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as localApiCrearLocalResponse
-}
-
-
-
-/**
- * @summary Actualizar Local
- */
-export type localApiActualizarLocalResponse200 = {
-  data: LocalSchema
-  status: 200
-}
-    
-export type localApiActualizarLocalResponseSuccess = (localApiActualizarLocalResponse200) & {
-  headers: Headers;
-};
-;
-
-export type localApiActualizarLocalResponse = (localApiActualizarLocalResponseSuccess)
-
-export const getLocalApiActualizarLocalUrl = (localId: number,) => {
-
-
-  
-
-  return `/api/locales/actualizar/${localId}`
-}
-
-export const localApiActualizarLocal = async (localId: number,
-    localUpdateSchema: LocalUpdateSchema, options?: RequestInit): Promise<localApiActualizarLocalResponse> => {
-  
-  const res = await fetch(getLocalApiActualizarLocalUrl(localId),
+  const res = await fetch(getProductoApiActualizarProductoUrl(productoId),
   {      
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      localUpdateSchema,)
+      productoUpdateSchema,)
   }
 )
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
   
-  const data: localApiActualizarLocalResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as localApiActualizarLocalResponse
+  const data: productoApiActualizarProductoResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as productoApiActualizarProductoResponse
 }
 
 
 
 /**
- * @summary Eliminar Local
+ * @summary Eliminar Producto
  */
-export type localApiEliminarLocalResponse200 = {
+export type productoApiEliminarProductoResponse200 = {
   data: void
   status: 200
 }
     
-export type localApiEliminarLocalResponseSuccess = (localApiEliminarLocalResponse200) & {
+export type productoApiEliminarProductoResponseSuccess = (productoApiEliminarProductoResponse200) & {
   headers: Headers;
 };
 ;
 
-export type localApiEliminarLocalResponse = (localApiEliminarLocalResponseSuccess)
+export type productoApiEliminarProductoResponse = (productoApiEliminarProductoResponseSuccess)
 
-export const getLocalApiEliminarLocalUrl = (localId: number,) => {
+export const getProductoApiEliminarProductoUrl = (productoId: number,) => {
 
 
   
 
-  return `/api/locales/eliminar/${localId}`
+  return `/api/productos/eliminar/${productoId}`
 }
 
-export const localApiEliminarLocal = async (localId: number, options?: RequestInit): Promise<localApiEliminarLocalResponse> => {
+export const productoApiEliminarProducto = async (productoId: number, options?: RequestInit): Promise<productoApiEliminarProductoResponse> => {
   
-  const res = await fetch(getLocalApiEliminarLocalUrl(localId),
+  const res = await fetch(getProductoApiEliminarProductoUrl(productoId),
   {      
     ...options,
     method: 'DELETE'
@@ -188,143 +140,6 @@ export const localApiEliminarLocal = async (localId: number, options?: RequestIn
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
   
-  const data: localApiEliminarLocalResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as localApiEliminarLocalResponse
-}
-
-
-
-/**
- * @summary Listar Usuarios Con Locales
- */
-export type localUsuarioLocalApiListarUsuariosConLocalesResponse200 = {
-  data: PagedUsuarioConLocalesSchema
-  status: 200
-}
-    
-export type localUsuarioLocalApiListarUsuariosConLocalesResponseSuccess = (localUsuarioLocalApiListarUsuariosConLocalesResponse200) & {
-  headers: Headers;
-};
-;
-
-export type localUsuarioLocalApiListarUsuariosConLocalesResponse = (localUsuarioLocalApiListarUsuariosConLocalesResponseSuccess)
-
-export const getLocalUsuarioLocalApiListarUsuariosConLocalesUrl = (params?: LocalUsuarioLocalApiListarUsuariosConLocalesParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/locales/usuario-local/listar?${stringifiedParams}` : `/api/locales/usuario-local/listar`
-}
-
-export const localUsuarioLocalApiListarUsuariosConLocales = async (params?: LocalUsuarioLocalApiListarUsuariosConLocalesParams, options?: RequestInit): Promise<localUsuarioLocalApiListarUsuariosConLocalesResponse> => {
-  
-  const res = await fetch(getLocalUsuarioLocalApiListarUsuariosConLocalesUrl(params),
-  {      
-    ...options,
-    method: 'GET'
-    
-    
-  }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: localUsuarioLocalApiListarUsuariosConLocalesResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as localUsuarioLocalApiListarUsuariosConLocalesResponse
-}
-
-
-
-/**
- * @summary Asignar Local A Usuario
- */
-export type localUsuarioLocalApiAsignarLocalAUsuarioResponse200 = {
-  data: UsuarioConLocalesSchema
-  status: 200
-}
-    
-export type localUsuarioLocalApiAsignarLocalAUsuarioResponseSuccess = (localUsuarioLocalApiAsignarLocalAUsuarioResponse200) & {
-  headers: Headers;
-};
-;
-
-export type localUsuarioLocalApiAsignarLocalAUsuarioResponse = (localUsuarioLocalApiAsignarLocalAUsuarioResponseSuccess)
-
-export const getLocalUsuarioLocalApiAsignarLocalAUsuarioUrl = (usuarioId: number,) => {
-
-
-  
-
-  return `/api/locales/usuario-local/asignar/${usuarioId}`
-}
-
-export const localUsuarioLocalApiAsignarLocalAUsuario = async (usuarioId: number,
-    usuarioLocalPayloadSchema: UsuarioLocalPayloadSchema, options?: RequestInit): Promise<localUsuarioLocalApiAsignarLocalAUsuarioResponse> => {
-  
-  const res = await fetch(getLocalUsuarioLocalApiAsignarLocalAUsuarioUrl(usuarioId),
-  {      
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      usuarioLocalPayloadSchema,)
-  }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: localUsuarioLocalApiAsignarLocalAUsuarioResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as localUsuarioLocalApiAsignarLocalAUsuarioResponse
-}
-
-
-
-/**
- * @summary Desasignar Local A Usuario
- */
-export type localUsuarioLocalApiDesasignarLocalAUsuarioResponse200 = {
-  data: UsuarioConLocalesSchema
-  status: 200
-}
-    
-export type localUsuarioLocalApiDesasignarLocalAUsuarioResponseSuccess = (localUsuarioLocalApiDesasignarLocalAUsuarioResponse200) & {
-  headers: Headers;
-};
-;
-
-export type localUsuarioLocalApiDesasignarLocalAUsuarioResponse = (localUsuarioLocalApiDesasignarLocalAUsuarioResponseSuccess)
-
-export const getLocalUsuarioLocalApiDesasignarLocalAUsuarioUrl = (usuarioId: number,) => {
-
-
-  
-
-  return `/api/locales/usuario-local/desasignar/${usuarioId}`
-}
-
-export const localUsuarioLocalApiDesasignarLocalAUsuario = async (usuarioId: number,
-    usuarioLocalPayloadSchema: UsuarioLocalPayloadSchema, options?: RequestInit): Promise<localUsuarioLocalApiDesasignarLocalAUsuarioResponse> => {
-  
-  const res = await fetch(getLocalUsuarioLocalApiDesasignarLocalAUsuarioUrl(usuarioId),
-  {      
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      usuarioLocalPayloadSchema,)
-  }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: localUsuarioLocalApiDesasignarLocalAUsuarioResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as localUsuarioLocalApiDesasignarLocalAUsuarioResponse
+  const data: productoApiEliminarProductoResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as productoApiEliminarProductoResponse
 }

@@ -6,10 +6,10 @@
     "description": ""
   },
   "paths": {
-    "/api/locales/listar": {
+    "/api/productos/listar": {
       "get": {
-        "operationId": "local_api_listar_locales",
-        "summary": "Listar Locales",
+        "operationId": "producto_api_listar_productos",
+        "summary": "Listar Productos",
         "parameters": [
           {
             "in": "query",
@@ -56,13 +56,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PagedLocalSchema"
+                  "$ref": "#/components/schemas/PagedProductoSchema"
                 }
               }
             }
           }
         },
-        "tags": ["Locales"],
+        "tags": ["Productos"],
         "security": [
           {
             "AuthBearer": []
@@ -70,51 +70,16 @@
         ]
       }
     },
-    "/api/locales/crear": {
-      "post": {
-        "operationId": "local_api_crear_local",
-        "summary": "Crear Local",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LocalSchema"
-                }
-              }
-            }
-          }
-        },
-        "tags": ["Locales"],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LocalCreateSchema"
-              }
-            }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "AuthBearer": []
-          }
-        ]
-      }
-    },
-    "/api/locales/actualizar/{local_id}": {
+    "/api/productos/actualizar/{producto_id}": {
       "put": {
-        "operationId": "local_api_actualizar_local",
-        "summary": "Actualizar Local",
+        "operationId": "producto_api_actualizar_producto",
+        "summary": "Actualizar Producto",
         "parameters": [
           {
             "in": "path",
-            "name": "local_id",
+            "name": "producto_id",
             "schema": {
-              "title": "Local Id",
+              "title": "Producto Id",
               "type": "integer"
             },
             "required": true
@@ -126,18 +91,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LocalSchema"
+                  "$ref": "#/components/schemas/ProductoSchema"
                 }
               }
             }
           }
         },
-        "tags": ["Locales"],
+        "tags": ["Productos"],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LocalUpdateSchema"
+                "$ref": "#/components/schemas/ProductoUpdateSchema"
               }
             }
           },
@@ -150,16 +115,16 @@
         ]
       }
     },
-    "/api/locales/eliminar/{local_id}": {
+    "/api/productos/eliminar/{producto_id}": {
       "delete": {
-        "operationId": "local_api_eliminar_local",
-        "summary": "Eliminar Local",
+        "operationId": "producto_api_eliminar_producto",
+        "summary": "Eliminar Producto",
         "parameters": [
           {
             "in": "path",
-            "name": "local_id",
+            "name": "producto_id",
             "schema": {
-              "title": "Local Id",
+              "title": "Producto Id",
               "type": "integer"
             },
             "required": true
@@ -170,145 +135,7 @@
             "description": "OK"
           }
         },
-        "tags": ["Locales"],
-        "security": [
-          {
-            "AuthBearer": []
-          }
-        ]
-      }
-    },
-    "/api/locales/usuario-local/listar": {
-      "get": {
-        "operationId": "local_usuario_local_api_listar_usuarios_con_locales",
-        "summary": "Listar Usuarios Con Locales",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "default": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            },
-            "required": false
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            },
-            "required": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PagedUsuarioConLocalesSchema"
-                }
-              }
-            }
-          }
-        },
-        "tags": ["Usuario Local"],
-        "security": [
-          {
-            "AuthBearer": []
-          }
-        ]
-      }
-    },
-    "/api/locales/usuario-local/asignar/{usuario_id}": {
-      "post": {
-        "operationId": "local_usuario_local_api_asignar_local_a_usuario",
-        "summary": "Asignar Local A Usuario",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "usuario_id",
-            "schema": {
-              "title": "Usuario Id",
-              "type": "integer"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UsuarioConLocalesSchema"
-                }
-              }
-            }
-          }
-        },
-        "tags": ["Usuario Local"],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UsuarioLocalPayloadSchema"
-              }
-            }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "AuthBearer": []
-          }
-        ]
-      }
-    },
-    "/api/locales/usuario-local/desasignar/{usuario_id}": {
-      "post": {
-        "operationId": "local_usuario_local_api_desasignar_local_a_usuario",
-        "summary": "Desasignar Local A Usuario",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "usuario_id",
-            "schema": {
-              "title": "Usuario Id",
-              "type": "integer"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UsuarioConLocalesSchema"
-                }
-              }
-            }
-          }
-        },
-        "tags": ["Usuario Local"],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UsuarioLocalPayloadSchema"
-              }
-            }
-          },
-          "required": true
-        },
+        "tags": ["Productos"],
         "security": [
           {
             "AuthBearer": []
@@ -337,7 +164,25 @@
         "title": "Input",
         "type": "object"
       },
-      "LocalSchema": {
+      "PagedProductoSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductoSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "count"],
+        "title": "PagedProductoSchema",
+        "type": "object"
+      },
+      "ProductoSchema": {
         "properties": {
           "id": {
             "anyOf": [
@@ -365,45 +210,21 @@
             "title": "Nombre",
             "type": "string"
           },
+          "precio": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Precio",
+            "type": "string"
+          },
           "cuenta": {
             "title": "Cuenta",
             "type": "integer"
           }
         },
-        "required": ["created_at", "updated_at", "nombre", "cuenta"],
-        "title": "LocalSchema",
+        "required": ["created_at", "updated_at", "nombre", "precio", "cuenta"],
+        "title": "ProductoSchema",
         "type": "object"
       },
-      "PagedLocalSchema": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/LocalSchema"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "count": {
-            "title": "Count",
-            "type": "integer"
-          }
-        },
-        "required": ["items", "count"],
-        "title": "PagedLocalSchema",
-        "type": "object"
-      },
-      "LocalCreateSchema": {
-        "properties": {
-          "nombre": {
-            "title": "Nombre",
-            "type": "string"
-          }
-        },
-        "required": ["nombre"],
-        "title": "LocalCreateSchema",
-        "type": "object"
-      },
-      "LocalUpdateSchema": {
+      "ProductoUpdateSchema": {
         "properties": {
           "nombre": {
             "anyOf": [
@@ -415,79 +236,20 @@
               }
             ],
             "title": "Nombre"
+          },
+          "precio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precio"
           }
         },
-        "title": "LocalUpdateSchema",
-        "type": "object"
-      },
-      "LocalAsignadoSchema": {
-        "properties": {
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "nombre": {
-            "title": "Nombre",
-            "type": "string"
-          }
-        },
-        "required": ["id", "nombre"],
-        "title": "LocalAsignadoSchema",
-        "type": "object"
-      },
-      "PagedUsuarioConLocalesSchema": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/UsuarioConLocalesSchema"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "count": {
-            "title": "Count",
-            "type": "integer"
-          }
-        },
-        "required": ["items", "count"],
-        "title": "PagedUsuarioConLocalesSchema",
-        "type": "object"
-      },
-      "UsuarioConLocalesSchema": {
-        "properties": {
-          "usuario_id": {
-            "title": "Usuario Id",
-            "type": "integer"
-          },
-          "email": {
-            "title": "Email",
-            "type": "string"
-          },
-          "es_admin": {
-            "title": "Es Admin",
-            "type": "boolean"
-          },
-          "locales": {
-            "items": {
-              "$ref": "#/components/schemas/LocalAsignadoSchema"
-            },
-            "title": "Locales",
-            "type": "array"
-          }
-        },
-        "required": ["usuario_id", "email", "es_admin", "locales"],
-        "title": "UsuarioConLocalesSchema",
-        "type": "object"
-      },
-      "UsuarioLocalPayloadSchema": {
-        "properties": {
-          "local_id": {
-            "title": "Local Id",
-            "type": "integer"
-          }
-        },
-        "required": ["local_id"],
-        "title": "UsuarioLocalPayloadSchema",
+        "title": "ProductoUpdateSchema",
         "type": "object"
       }
     },
