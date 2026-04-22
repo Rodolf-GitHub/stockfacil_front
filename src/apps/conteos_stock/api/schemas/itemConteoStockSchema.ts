@@ -5,15 +5,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface ProductoSchema {
+export interface ItemConteoStockSchema {
   id?: number | null;
   created_at: string;
   updated_at: string;
-  /** @maxLength 255 */
-  nombre: string;
+  conteo_stock: number;
+  producto: number;
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
-  precio: string;
-  /** @maxLength 50 */
-  unidad_medida?: string;
-  cuenta: number;
+  cantidad_conteada: string;
 }

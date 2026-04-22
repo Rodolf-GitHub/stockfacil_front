@@ -510,6 +510,41 @@
           }
         ]
       }
+    },
+    "/api/conteos-stock/resumen/{conteo_id}": {
+      "get": {
+        "operationId": "conteostock_api_resumen_conteo",
+        "summary": "Resumen Conteo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conteo_id",
+            "schema": {
+              "title": "Conteo Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenConteoSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -799,6 +834,41 @@
         },
         "required": ["producto_id", "producto_nombre", "cantidad_a_comprar"],
         "title": "ItemListaCompraTotalSchema",
+        "type": "object"
+      },
+      "ResumenConteoSchema": {
+        "properties": {
+          "conteo_id": {
+            "title": "Conteo Id",
+            "type": "integer"
+          },
+          "local_id": {
+            "title": "Local Id",
+            "type": "integer"
+          },
+          "local_nombre": {
+            "title": "Local Nombre",
+            "type": "string"
+          },
+          "fecha": {
+            "format": "date",
+            "title": "Fecha",
+            "type": "string"
+          },
+          "estado": {
+            "title": "Estado",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemListaCompraSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": ["conteo_id", "local_id", "local_nombre", "fecha", "estado", "items"],
+        "title": "ResumenConteoSchema",
         "type": "object"
       }
     },
