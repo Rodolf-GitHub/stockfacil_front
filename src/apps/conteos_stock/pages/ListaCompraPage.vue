@@ -112,7 +112,12 @@ const itemsTotalAgregado = computed(() => {
   if (!esTotal.value) return []
   const map = new Map<
     number,
-    { producto_id: number; producto_nombre: string; cantidad_a_comprar: number }
+    {
+      producto_id: number
+      producto_nombre: string
+      unidad_medida: string
+      cantidad_a_comprar: number
+    }
   >()
   for (const loc of localesResumen.value) {
     for (const it of loc.items) {
@@ -123,6 +128,7 @@ const itemsTotalAgregado = computed(() => {
         map.set(it.producto_id, {
           producto_id: it.producto_id,
           producto_nombre: it.producto_nombre,
+          unidad_medida: it.unidad_medida,
           cantidad_a_comprar: cant,
         })
     }
@@ -311,6 +317,11 @@ const formatNum = (n: number | string | null | undefined) => {
                   Producto
                 </th>
                 <th
+                  class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
+                >
+                  Unidad
+                </th>
+                <th
                   class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
                 >
                   Obj.
@@ -335,6 +346,9 @@ const formatNum = (n: number | string | null | undefined) => {
               >
                 <td class="px-3 py-2 text-sm font-medium text-[var(--text-100)] sm:px-4">
                   {{ it.producto_nombre }}
+                </td>
+                <td class="px-2 py-2 text-left text-xs text-[var(--text-200)] sm:px-3 sm:text-sm">
+                  {{ it.unidad_medida || '-' }}
                 </td>
                 <td class="px-2 py-2 text-right text-xs text-[var(--text-200)] sm:px-3 sm:text-sm">
                   {{ formatNum(it.cantidad_objetivo) }}
@@ -375,6 +389,11 @@ const formatNum = (n: number | string | null | undefined) => {
                 Producto
               </th>
               <th
+                class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
+              >
+                Unidad
+              </th>
+              <th
                 class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
               >
                 A comprar
@@ -389,6 +408,9 @@ const formatNum = (n: number | string | null | undefined) => {
             >
               <td class="px-3 py-2 text-sm font-medium text-[var(--text-100)] sm:px-4">
                 {{ it.producto_nombre }}
+              </td>
+              <td class="px-2 py-2 text-left text-xs text-[var(--text-200)] sm:px-3 sm:text-sm">
+                {{ it.unidad_medida || '-' }}
               </td>
               <td class="px-3 py-2 text-right sm:px-4">
                 <span
