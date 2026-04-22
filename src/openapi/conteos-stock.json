@@ -528,19 +528,36 @@
         ]
       }
     },
-    "/api/conteos-stock/resumen/{conteo_id}": {
+    "/api/conteos-stock/resumen": {
       "get": {
-        "operationId": "conteostock_api_resumen_conteo",
-        "summary": "Resumen Conteo",
+        "operationId": "conteostock_api_resumen_por_fecha",
+        "summary": "Resumen Por Fecha",
         "parameters": [
           {
-            "in": "path",
-            "name": "conteo_id",
+            "in": "query",
+            "name": "fecha",
             "schema": {
-              "title": "Conteo Id",
-              "type": "integer"
+              "format": "date",
+              "title": "Fecha",
+              "type": "string"
             },
             "required": true
+          },
+          {
+            "in": "query",
+            "name": "local_id",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Local Id"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -549,7 +566,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResumenConteoSchema"
+                  "$ref": "#/components/schemas/ResumenLocalFechaSchema"
                 }
               }
             }
@@ -927,6 +944,32 @@
         },
         "required": ["conteo_id", "local_id", "local_nombre", "fecha", "estado", "items"],
         "title": "ResumenConteoSchema",
+        "type": "object"
+      },
+      "ResumenLocalFechaSchema": {
+        "properties": {
+          "fecha": {
+            "format": "date",
+            "title": "Fecha",
+            "type": "string"
+          },
+          "locales": {
+            "items": {
+              "$ref": "#/components/schemas/ResumenConteoSchema"
+            },
+            "title": "Locales",
+            "type": "array"
+          },
+          "locales_sin_conteo_finalizado": {
+            "items": {
+              "$ref": "#/components/schemas/LocalSinConteoSchema"
+            },
+            "title": "Locales Sin Conteo Finalizado",
+            "type": "array"
+          }
+        },
+        "required": ["fecha", "locales", "locales_sin_conteo_finalizado"],
+        "title": "ResumenLocalFechaSchema",
         "type": "object"
       }
     },

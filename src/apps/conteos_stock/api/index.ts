@@ -11,13 +11,14 @@ import type {
   ConteostockApiListaComprasLocalParams,
   ConteostockApiListaComprasTotalParams,
   ConteostockApiListarConteosParams,
+  ConteostockApiResumenPorFechaParams,
   ItemConteoStockCreateSchema,
   ItemConteoStockSchema,
   ItemConteoStockUpdateSchema,
   ListaCompraLocalSchema,
   ListaCompraTotalSchema,
   PagedConteoStockSchema,
-  ResumenConteoSchema
+  ResumenLocalFechaSchema
 } from './schemas';
 
 /**
@@ -594,31 +595,38 @@ export const conteostockApiListaComprasTotal = async (params: ConteostockApiList
 
 
 /**
- * @summary Resumen Conteo
+ * @summary Resumen Por Fecha
  */
-export type conteostockApiResumenConteoResponse200 = {
-  data: ResumenConteoSchema
+export type conteostockApiResumenPorFechaResponse200 = {
+  data: ResumenLocalFechaSchema
   status: 200
 }
     
-export type conteostockApiResumenConteoResponseSuccess = (conteostockApiResumenConteoResponse200) & {
+export type conteostockApiResumenPorFechaResponseSuccess = (conteostockApiResumenPorFechaResponse200) & {
   headers: Headers;
 };
 ;
 
-export type conteostockApiResumenConteoResponse = (conteostockApiResumenConteoResponseSuccess)
+export type conteostockApiResumenPorFechaResponse = (conteostockApiResumenPorFechaResponseSuccess)
 
-export const getConteostockApiResumenConteoUrl = (conteoId: number,) => {
+export const getConteostockApiResumenPorFechaUrl = (params: ConteostockApiResumenPorFechaParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
-  
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/conteos-stock/resumen/${conteoId}`
+  return stringifiedParams.length > 0 ? `/api/conteos-stock/resumen?${stringifiedParams}` : `/api/conteos-stock/resumen`
 }
 
-export const conteostockApiResumenConteo = async (conteoId: number, options?: RequestInit): Promise<conteostockApiResumenConteoResponse> => {
+export const conteostockApiResumenPorFecha = async (params: ConteostockApiResumenPorFechaParams, options?: RequestInit): Promise<conteostockApiResumenPorFechaResponse> => {
   
-  const res = await fetch(getConteostockApiResumenConteoUrl(conteoId),
+  const res = await fetch(getConteostockApiResumenPorFechaUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -629,6 +637,6 @@ export const conteostockApiResumenConteo = async (conteoId: number, options?: Re
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
   
-  const data: conteostockApiResumenConteoResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as conteostockApiResumenConteoResponse
+  const data: conteostockApiResumenPorFechaResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as conteostockApiResumenPorFechaResponse
 }

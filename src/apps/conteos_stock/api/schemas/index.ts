@@ -8,6 +8,7 @@
 export * from './conteostockApiListaComprasLocalParams';
 export * from './conteostockApiListaComprasTotalParams';
 export * from './conteostockApiListarConteosParams';
+export * from './conteostockApiResumenPorFechaParams';
 export * from './conteoStockCreateSchema';
 export * from './conteoStockSchema';
 export * from './conteoStockUpdateSchema';
@@ -22,3 +23,4 @@ export * from './listaCompraTotalSchema';
 export * from './localSinConteoSchema';
 export * from './pagedConteoStockSchema';
 export * from './resumenConteoSchema';
+export * from './resumenLocalFechaSchema';
