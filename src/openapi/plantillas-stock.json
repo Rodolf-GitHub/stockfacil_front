@@ -236,15 +236,28 @@
       "PlantillaStockSchema": {
         "properties": {
           "id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "ID"
+            "title": "Id",
+            "type": "integer"
+          },
+          "local_id": {
+            "title": "Local Id",
+            "type": "integer"
+          },
+          "producto_id": {
+            "title": "Producto Id",
+            "type": "integer"
+          },
+          "producto_nombre": {
+            "title": "Producto Nombre",
+            "type": "string"
+          },
+          "producto_unidad_medida": {
+            "title": "Producto Unidad Medida",
+            "type": "string"
+          },
+          "cantidad_objetivo": {
+            "title": "Cantidad Objetivo",
+            "type": "number"
           },
           "created_at": {
             "format": "date-time",
@@ -255,22 +268,18 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
-          },
-          "local": {
-            "title": "Local",
-            "type": "integer"
-          },
-          "producto": {
-            "title": "Producto",
-            "type": "integer"
-          },
-          "cantidad_objetivo": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Cantidad Objetivo",
-            "type": "string"
           }
         },
-        "required": ["created_at", "updated_at", "local", "producto", "cantidad_objetivo"],
+        "required": [
+          "id",
+          "local_id",
+          "producto_id",
+          "producto_nombre",
+          "producto_unidad_medida",
+          "cantidad_objetivo",
+          "created_at",
+          "updated_at"
+        ],
         "title": "PlantillaStockSchema",
         "type": "object"
       },

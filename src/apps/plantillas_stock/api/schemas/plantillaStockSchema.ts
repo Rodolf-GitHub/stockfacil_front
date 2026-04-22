@@ -6,11 +6,12 @@
  */
 
 export interface PlantillaStockSchema {
-  id?: number | null;
+  id: number;
+  local_id: number;
+  producto_id: number;
+  producto_nombre: string;
+  producto_unidad_medida: string;
+  cantidad_objetivo: number;
   created_at: string;
   updated_at: string;
-  local: number;
-  producto: number;
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
-  cantidad_objetivo: string;
 }

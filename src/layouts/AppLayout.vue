@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
+  CircleHelp,
   ClipboardList,
   KeyRound,
   LayoutDashboard,
@@ -310,6 +311,24 @@ const cambiarPassword = async () => {
               <span class="flex flex-col">
                 <span class="text-sm font-semibold">Compras</span>
                 <span class="text-xs text-[var(--text-200)]">Lista de compras</span>
+              </span>
+            </RouterLink>
+          </li>
+
+          <!-- Ayuda -->
+          <li>
+            <RouterLink
+              @click="closeSidebarOnMobile"
+              to="/ayuda"
+              class="nav-link"
+              active-class="nav-link-active"
+            >
+              <span class="nav-icon bg-sky-100 text-sky-600">
+                <CircleHelp class="h-5 w-5" :stroke-width="2" />
+              </span>
+              <span class="flex flex-col">
+                <span class="text-sm font-semibold">Ayuda</span>
+                <span class="text-xs text-[var(--text-200)]">Guía y soporte</span>
               </span>
             </RouterLink>
           </li>

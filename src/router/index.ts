@@ -9,6 +9,7 @@ import UsuariosPage from '@/apps/usuarios/pages/UsuariosPage.vue'
 import PlantillasStockPage from '@/apps/plantillas_stock/pages/PlantillasStockPage.vue'
 import ConteosStockPage from '@/apps/conteos_stock/pages/ConteosStockPage.vue'
 import ListaCompraPage from '@/apps/conteos_stock/pages/ListaCompraPage.vue'
+import AyudaPage from '@/apps/ayuda/pages/AyudaPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -61,6 +62,11 @@ const router = createRouter({
           path: '/compras',
           name: 'compras',
           component: ListaCompraPage,
+        },
+        {
+          path: '/ayuda',
+          name: 'ayuda',
+          component: AyudaPage,
         },
       ],
     },

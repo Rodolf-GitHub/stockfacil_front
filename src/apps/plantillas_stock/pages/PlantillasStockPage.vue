@@ -35,6 +35,7 @@ const productos = ref<ProductoSchema[]>([])
 const showFormModal = ref(false)
 const modoEditar = ref(false)
 const seleccion = ref<PlantillaStockSchema | null>(null)
+const productoBusquedaModal = ref('')
 const form = ref({
   local_id: null as number | null,
   producto_id: null as number | null,
@@ -81,8 +82,9 @@ const cargarLocales = async () => {
     } as RequestInit)
     if (res.status >= 200 && res.status < 300) {
       locales.value = res.data.items
-      if (localFiltro.value == null && locales.value.length > 0 && locales.value[0].id != null) {
-        localFiltro.value = locales.value[0].id
+      const primerLocal = locales.value[0]
+      if (localFiltro.value == null && primerLocal?.id != null) {
+        localFiltro.value = primerLocal.id
       }
     }
   } catch {
@@ -122,9 +124,21 @@ const productosMap = computed(() => {
   return m
 })
 
+const productosFiltradosModal = computed(() => {
+  const q = productoBusquedaModal.value.trim().toLowerCase()
+  if (!q) return productos.value
+  return productos.value.filter((p) => p.nombre.toLowerCase().includes(q))
+})
+
+const seleccionarProductoModal = (productoId: number | null | undefined) => {
+  if (productoId == null || modoEditar.value) return
+  form.value.producto_id = productoId
+}
+
 const abrirCrear = () => {
   modoEditar.value = false
   seleccion.value = null
+  productoBusquedaModal.value = ''
   form.value = { local_id: localFiltro.value, producto_id: null, cantidad: '' }
   showFormModal.value = true
 }
@@ -132,6 +146,7 @@ const abrirCrear = () => {
 const abrirEditar = (p: PlantillaStockSchema) => {
   modoEditar.value = true
   seleccion.value = p
+  productoBusquedaModal.value = ''
   form.value = { local_id: p.local, producto_id: p.producto, cantidad: p.cantidad_objetivo }
   showFormModal.value = true
 }
@@ -391,16 +406,57 @@ const confirmarEliminar = async () => {
         <label class="mb-1 block text-sm font-medium text-[var(--text-100)]"
           >Producto <span class="text-red-500">*</span></label
         >
-        <select
-          v-model="form.producto_id"
-          :disabled="modoEditar"
-          class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 disabled:bg-[var(--bg-100)]"
-        >
-          <option :value="null" disabled>Seleccioná un producto...</option>
-          <option v-for="p in productos" :key="p.id ?? p.nombre" :value="p.id">
-            {{ p.nombre }}
-          </option>
-        </select>
+        <div class="relative mb-2" v-if="!modoEditar">
+          <Search
+            :size="16"
+            class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-200)]"
+          />
+          <input
+            v-model="productoBusquedaModal"
+            type="text"
+            placeholder="Buscar producto..."
+            class="w-full rounded-lg border border-[var(--bg-300)] bg-white py-2 pl-9 pr-3 text-sm text-[var(--text-100)] placeholder-[var(--text-200)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+          />
+        </div>
+        <div v-if="!modoEditar" class="rounded-lg border border-[var(--bg-300)] bg-white">
+          <div class="max-h-56 overflow-y-auto p-1.5">
+            <button
+              v-for="p in productosFiltradosModal"
+              :key="p.id ?? p.nombre"
+              type="button"
+              class="mb-1 flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left transition-colors last:mb-0"
+              :class="
+                form.producto_id === p.id
+                  ? 'bg-cyan-100 text-cyan-800'
+                  : 'hover:bg-[var(--bg-100)] text-[var(--text-100)]'
+              "
+              @click="seleccionarProductoModal(p.id)"
+            >
+              <span class="truncate text-sm font-medium">{{ p.nombre }}</span>
+              <span class="ml-2 shrink-0 text-xs text-[var(--text-200)]">{{
+                p.unidad_medida
+              }}</span>
+            </button>
+            <p
+              v-if="productosFiltradosModal.length === 0"
+              class="px-2 py-4 text-center text-xs text-[var(--text-200)]"
+            >
+              No hay productos que coincidan con la búsqueda.
+            </p>
+          </div>
+        </div>
+        <div v-else>
+          <input
+            :value="productoNombre(form.producto_id ?? 0)"
+            disabled
+            class="w-full rounded-lg border border-[var(--bg-300)] bg-[var(--bg-100)] px-3 py-2 text-sm text-[var(--text-100)]"
+          />
+        </div>
+        <div v-if="!modoEditar" class="mt-2 text-xs text-[var(--text-200)]">
+          {{ productosFiltradosModal.length }} resultado{{
+            productosFiltradosModal.length !== 1 ? 's' : ''
+          }}
+        </div>
       </div>
       <div>
         <label class="mb-1 block text-sm font-medium text-[var(--text-100)]"
