@@ -14,6 +14,7 @@ import BaseModal from '@/components/BaseModal.vue'
 import BasePagination from '@/components/BasePagination.vue'
 import { useNotification } from '@/composables/useNotification'
 import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
+import { UNIDADES_MEDIDA } from '@/utils/unidadesMedida'
 
 const { success, error: notifyError } = useNotification()
 
@@ -30,6 +31,7 @@ const modoEditar = ref(false)
 const productoSeleccionado = ref<ProductoSchema | null>(null)
 const nombreForm = ref('')
 const precioForm = ref('')
+const unidadMedidaForm = ref<string>('unidades')
 const guardando = ref(false)
 
 const showDeleteModal = ref(false)
@@ -70,6 +72,7 @@ const abrirCrear = () => {
   productoSeleccionado.value = null
   nombreForm.value = ''
   precioForm.value = ''
+  unidadMedidaForm.value = 'unidades'
   showFormModal.value = true
 }
 
@@ -78,6 +81,7 @@ const abrirEditar = (p: ProductoSchema) => {
   productoSeleccionado.value = p
   nombreForm.value = p.nombre
   precioForm.value = p.precio
+  unidadMedidaForm.value = p.unidad_medida || 'unidades'
   showFormModal.value = true
 }
 
@@ -98,7 +102,11 @@ const guardar = async () => {
     if (modoEditar.value && productoSeleccionado.value?.id) {
       const res = await productoApiActualizarProducto(
         productoSeleccionado.value.id,
-        { nombre: nombreForm.value.trim(), precio: precioNum },
+        {
+          nombre: nombreForm.value.trim(),
+          precio: precioNum,
+          unidad_medida: unidadMedidaForm.value,
+        },
         authOptions(),
       )
       if (res.status >= 200 && res.status < 300) {
@@ -108,7 +116,11 @@ const guardar = async () => {
       }
     } else {
       const res = await productoApiCrearProducto(
-        { nombre: nombreForm.value.trim(), precio: precioNum },
+        {
+          nombre: nombreForm.value.trim(),
+          precio: precioNum,
+          unidad_medida: unidadMedidaForm.value,
+        },
         authOptions(),
       )
       if (res.status >= 200 && res.status < 300) {
@@ -201,6 +213,11 @@ const formatPrecio = (precio: string) => {
                 Producto
               </th>
               <th
+                class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
+              >
+                Unidad
+              </th>
+              <th
                 class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
               >
                 Precio
@@ -223,6 +240,9 @@ const formatPrecio = (precio: string) => {
                 <div class="h-5 w-48 animate-pulse rounded bg-[var(--bg-200)]"></div>
               </td>
               <td class="px-6 py-4">
+                <div class="h-5 w-20 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+              <td class="px-6 py-4">
                 <div class="ml-auto h-5 w-20 animate-pulse rounded bg-[var(--bg-200)]"></div>
               </td>
               <td class="px-6 py-4">
@@ -231,7 +251,7 @@ const formatPrecio = (precio: string) => {
             </tr>
 
             <tr v-else-if="productos.length === 0">
-              <td colspan="3" class="px-6 py-16 text-center">
+              <td colspan="4" class="px-6 py-16 text-center">
                 <Package :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
                 <p class="font-semibold text-[var(--text-100)]">No hay productos</p>
                 <p class="mt-1 text-sm text-[var(--text-200)]">
@@ -259,6 +279,13 @@ const formatPrecio = (precio: string) => {
                   </div>
                   <span class="font-medium text-[var(--text-100)]">{{ p.nombre }}</span>
                 </div>
+              </td>
+              <td class="px-6 py-4">
+                <span
+                  class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700"
+                >
+                  {{ p.unidad_medida || 'unidades' }}
+                </span>
               </td>
               <td class="px-6 py-4 text-right">
                 <span class="font-semibold text-[var(--text-100)]"
@@ -325,6 +352,20 @@ const formatPrecio = (precio: string) => {
   >
     <form class="space-y-4" @submit.prevent="guardar">
       <BaseInput v-model="nombreForm" label="Nombre" placeholder="Nombre del producto" required />
+      <div class="w-full">
+        <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">
+          Unidad de medida <span class="text-red-500">*</span>
+        </label>
+        <select
+          v-model="unidadMedidaForm"
+          required
+          class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+        >
+          <option v-for="u in UNIDADES_MEDIDA" :key="u.value" :value="u.value">
+            {{ u.label }}
+          </option>
+        </select>
+      </div>
       <div class="w-full">
         <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">
           Precio <span class="text-red-500">*</span>

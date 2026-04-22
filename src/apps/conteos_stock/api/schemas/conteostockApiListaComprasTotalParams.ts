@@ -6,5 +6,5 @@
  */
 
 export type ConteostockApiListaComprasTotalParams = {
-fecha?: string | null;
+fecha: string;
 };

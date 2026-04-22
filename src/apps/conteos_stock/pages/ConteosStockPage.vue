@@ -8,6 +8,7 @@ import {
   Lock,
   Pencil,
   Plus,
+  RotateCcw,
   Trash2,
 } from 'lucide-vue-next'
 import {
@@ -19,6 +20,7 @@ import {
   conteostockApiFinalizarConteo,
   conteostockApiListarConteos,
   conteostockApiListarItems,
+  conteostockApiReabrirConteo,
 } from '@/apps/conteos_stock/api'
 import type { ConteoStockSchema, ItemConteoStockSchema } from '@/apps/conteos_stock/api/schemas'
 import { plantillastockApiListarPlantillas } from '@/apps/plantillas_stock/api'
@@ -76,6 +78,7 @@ const guardandoPaso = ref(false)
 const esCantidadVacia = (v: string | number) =>
   v === '' || v === null || v === undefined || (typeof v === 'number' && Number.isNaN(v))
 const finalizando = ref(false)
+const reabriendo = ref(false)
 
 const authOptions = (): RequestInit => ({
   headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
@@ -142,9 +145,7 @@ onMounted(() => {
 
 const localNombre = (id: number) => locales.value.find((l) => l.id === id)?.nombre ?? `#${id}`
 const productoNombre = (id: number) => productos.value.find((p) => p.id === id)?.nombre ?? `#${id}`
-const productoUnidad = (id: number) =>
-  (productos.value.find((p) => p.id === id) as { unidad_medida?: string } | undefined)
-    ?.unidad_medida ?? ''
+const productoUnidad = (id: number) => productos.value.find((p) => p.id === id)?.unidad_medida ?? ''
 
 const abrirCrear = () => {
   crearForm.value = {
@@ -407,6 +408,25 @@ const cerrarWizard = async () => {
   showWizard.value = false
 }
 
+const reabrirConteo = async (c: ConteoStockSchema) => {
+  if (!c.id) return
+  reabriendo.value = true
+  try {
+    const res = await conteostockApiReabrirConteo(c.id, authOptions())
+    if (res.status >= 200 && res.status < 300) {
+      success('Conteo reabierto')
+      if (conteoDetalle.value && conteoDetalle.value.id === c.id) {
+        conteoDetalle.value.estado = res.data?.estado ?? 'borrador'
+      }
+      await cargar()
+    }
+  } catch {
+    notifyError('Error al reabrir el conteo')
+  } finally {
+    reabriendo.value = false
+  }
+}
+
 const productoYaContado = (productoId: number) =>
   itemsExistentes.value.some((it) => it.producto === productoId)
 
@@ -561,6 +581,16 @@ const estadoClass = (estado?: string) => {
                     title="Editar fecha"
                   >
                     <Pencil :size="16" />
+                  </button>
+                  <button
+                    v-if="c.estado === 'finalizado'"
+                    type="button"
+                    @click="reabrirConteo(c)"
+                    :disabled="reabriendo"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-200)] transition-colors hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50"
+                    title="Reabrir conteo"
+                  >
+                    <RotateCcw :size="16" />
                   </button>
                   <button
                     type="button"
@@ -841,11 +871,14 @@ const estadoClass = (estado?: string) => {
         </BaseButton>
       </template>
 
-      <span
-        v-else-if="esSoloLectura"
-        class="inline-flex items-center gap-1 text-sm text-[var(--text-200)]"
-      >
-        <Lock :size="14" /> Conteo finalizado
+      <span v-else-if="esSoloLectura && conteoDetalle" class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1 text-sm text-[var(--text-200)]">
+          <Lock :size="14" /> Conteo finalizado
+        </span>
+        <BaseButton variant="secondary" :loading="reabriendo" @click="reabrirConteo(conteoDetalle)">
+          <RotateCcw :size="16" />
+          Reabrir
+        </BaseButton>
       </span>
     </template>
   </BaseModal>

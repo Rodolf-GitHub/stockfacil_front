@@ -237,6 +237,41 @@
         ]
       }
     },
+    "/api/conteos-stock/reabrir/{conteo_id}": {
+      "post": {
+        "operationId": "conteostock_api_reabrir_conteo",
+        "summary": "Reabrir Conteo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conteo_id",
+            "schema": {
+              "title": "Conteo Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConteoStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
     "/api/conteos-stock/eliminar/{conteo_id}": {
       "delete": {
         "operationId": "conteostock_api_eliminar_conteo",
@@ -430,18 +465,11 @@
             "in": "query",
             "name": "fecha",
             "schema": {
-              "anyOf": [
-                {
-                  "format": "date",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Fecha"
+              "format": "date",
+              "title": "Fecha",
+              "type": "string"
             },
-            "required": false
+            "required": true
           }
         ],
         "responses": {
@@ -473,18 +501,11 @@
             "in": "query",
             "name": "fecha",
             "schema": {
-              "anyOf": [
-                {
-                  "format": "date",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Fecha"
+              "format": "date",
+              "title": "Fecha",
+              "type": "string"
             },
-            "required": false
+            "required": true
           }
         ],
         "responses": {
@@ -493,11 +514,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ItemListaCompraTotalSchema"
-                  },
-                  "title": "Response",
-                  "type": "array"
+                  "$ref": "#/components/schemas/ListaCompraTotalSchema"
                 }
               }
             }
@@ -834,6 +851,47 @@
         },
         "required": ["producto_id", "producto_nombre", "cantidad_a_comprar"],
         "title": "ItemListaCompraTotalSchema",
+        "type": "object"
+      },
+      "ListaCompraTotalSchema": {
+        "properties": {
+          "fecha": {
+            "format": "date",
+            "title": "Fecha",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemListaCompraTotalSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "locales_sin_conteo_finalizado": {
+            "items": {
+              "$ref": "#/components/schemas/LocalSinConteoSchema"
+            },
+            "title": "Locales Sin Conteo Finalizado",
+            "type": "array"
+          }
+        },
+        "required": ["fecha", "items", "locales_sin_conteo_finalizado"],
+        "title": "ListaCompraTotalSchema",
+        "type": "object"
+      },
+      "LocalSinConteoSchema": {
+        "properties": {
+          "local_id": {
+            "title": "Local Id",
+            "type": "integer"
+          },
+          "local_nombre": {
+            "title": "Local Nombre",
+            "type": "string"
+          }
+        },
+        "required": ["local_id", "local_nombre"],
+        "title": "LocalSinConteoSchema",
         "type": "object"
       },
       "ResumenConteoSchema": {

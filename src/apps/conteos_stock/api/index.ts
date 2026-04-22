@@ -14,8 +14,8 @@ import type {
   ItemConteoStockCreateSchema,
   ItemConteoStockSchema,
   ItemConteoStockUpdateSchema,
-  ItemListaCompraTotalSchema,
   ListaCompraLocalSchema,
+  ListaCompraTotalSchema,
   PagedConteoStockSchema,
   ResumenConteoSchema
 } from './schemas';
@@ -236,6 +236,48 @@ export const conteostockApiFinalizarConteo = async (conteoId: number, options?: 
   
   const data: conteostockApiFinalizarConteoResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as conteostockApiFinalizarConteoResponse
+}
+
+
+
+/**
+ * @summary Reabrir Conteo
+ */
+export type conteostockApiReabrirConteoResponse200 = {
+  data: ConteoStockSchema
+  status: 200
+}
+    
+export type conteostockApiReabrirConteoResponseSuccess = (conteostockApiReabrirConteoResponse200) & {
+  headers: Headers;
+};
+;
+
+export type conteostockApiReabrirConteoResponse = (conteostockApiReabrirConteoResponseSuccess)
+
+export const getConteostockApiReabrirConteoUrl = (conteoId: number,) => {
+
+
+  
+
+  return `/api/conteos-stock/reabrir/${conteoId}`
+}
+
+export const conteostockApiReabrirConteo = async (conteoId: number, options?: RequestInit): Promise<conteostockApiReabrirConteoResponse> => {
+  
+  const res = await fetch(getConteostockApiReabrirConteoUrl(conteoId),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: conteostockApiReabrirConteoResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as conteostockApiReabrirConteoResponse
 }
 
 
@@ -506,7 +548,7 @@ export const conteostockApiListaComprasLocal = async (params: ConteostockApiList
  * @summary Lista Compras Total
  */
 export type conteostockApiListaComprasTotalResponse200 = {
-  data: ItemListaCompraTotalSchema[]
+  data: ListaCompraTotalSchema
   status: 200
 }
     
@@ -517,7 +559,7 @@ export type conteostockApiListaComprasTotalResponseSuccess = (conteostockApiList
 
 export type conteostockApiListaComprasTotalResponse = (conteostockApiListaComprasTotalResponseSuccess)
 
-export const getConteostockApiListaComprasTotalUrl = (params?: ConteostockApiListaComprasTotalParams,) => {
+export const getConteostockApiListaComprasTotalUrl = (params: ConteostockApiListaComprasTotalParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -532,7 +574,7 @@ export const getConteostockApiListaComprasTotalUrl = (params?: ConteostockApiLis
   return stringifiedParams.length > 0 ? `/api/conteos-stock/comprar/total?${stringifiedParams}` : `/api/conteos-stock/comprar/total`
 }
 
-export const conteostockApiListaComprasTotal = async (params?: ConteostockApiListaComprasTotalParams, options?: RequestInit): Promise<conteostockApiListaComprasTotalResponse> => {
+export const conteostockApiListaComprasTotal = async (params: ConteostockApiListaComprasTotalParams, options?: RequestInit): Promise<conteostockApiListaComprasTotalResponse> => {
   
   const res = await fetch(getConteostockApiListaComprasTotalUrl(params),
   {      

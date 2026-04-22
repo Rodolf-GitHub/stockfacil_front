@@ -18,5 +18,7 @@ export * from './itemConteoStockUpdateSchema';
 export * from './itemListaCompraSchema';
 export * from './itemListaCompraTotalSchema';
 export * from './listaCompraLocalSchema';
+export * from './listaCompraTotalSchema';
+export * from './localSinConteoSchema';
 export * from './pagedConteoStockSchema';
 export * from './resumenConteoSchema';

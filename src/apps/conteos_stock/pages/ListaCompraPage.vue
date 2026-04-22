@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Download, ShoppingCart } from 'lucide-vue-next'
 import {
   conteostockApiListaComprasLocal,
@@ -8,6 +8,7 @@ import {
 import type {
   ItemListaCompraSchema,
   ItemListaCompraTotalSchema,
+  LocalSinConteoSchema,
 } from '@/apps/conteos_stock/api/schemas'
 import { localApiListarLocales } from '@/apps/locales/api'
 import type { LocalSchema } from '@/apps/locales/api/schemas'
@@ -17,18 +18,21 @@ import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
 
 const { error: notifyError } = useNotification()
 
-type Modo = 'local' | 'total'
-const modo = ref<Modo>('local')
+// localId === null  -> Todos los locales (modo total)
+// localId === number -> ese local (modo local)
 const localId = ref<number | null>(null)
 const fecha = ref<string>('')
 
 const locales = ref<LocalSchema[]>([])
 const itemsLocal = ref<ItemListaCompraSchema[]>([])
 const itemsTotal = ref<ItemListaCompraTotalSchema[]>([])
+const localesSinConteo = ref<LocalSinConteoSchema[]>([])
 const localNombre = ref<string>('')
 const fechaResp = ref<string>('')
 const cargando = ref(false)
 const consultado = ref(false)
+
+const esTotal = computed(() => localId.value === null)
 
 const authOptions = (): RequestInit => ({
   headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
@@ -47,37 +51,15 @@ const cargarLocales = async () => {
 }
 
 onMounted(async () => {
-  await cargarLocales()
-  if (locales.value.length > 0 && locales.value[0].id != null) {
-    localId.value = locales.value[0].id
-  }
   fecha.value = new Date().toISOString().slice(0, 10)
-  if (localId.value != null) {
-    await consultar()
-  }
+  await cargarLocales()
 })
 
 const consultar = async () => {
   cargando.value = true
   consultado.value = true
   try {
-    if (modo.value === 'local') {
-      if (localId.value == null) {
-        notifyError('Seleccioná un local')
-        cargando.value = false
-        return
-      }
-      const res = await conteostockApiListaComprasLocal(
-        { local_id: localId.value, fecha: fecha.value || undefined },
-        { ...authOptions(), fetch: fetchWithBaseUrl } as RequestInit,
-      )
-      if (res.status >= 200 && res.status < 300) {
-        itemsLocal.value = res.data.items
-        localNombre.value = res.data.local_nombre
-        fechaResp.value = res.data.fecha
-        itemsTotal.value = []
-      }
-    } else {
+    if (esTotal.value) {
       const res = await conteostockApiListaComprasTotal({ fecha: fecha.value || undefined }, {
         ...authOptions(),
         fetch: fetchWithBaseUrl,
@@ -85,6 +67,18 @@ const consultar = async () => {
       if (res.status >= 200 && res.status < 300) {
         itemsTotal.value = res.data
         itemsLocal.value = []
+      }
+    } else {
+      const res = await conteostockApiListaComprasLocal(
+        { local_id: localId.value as number, fecha: fecha.value || undefined },
+        { ...authOptions(), fetch: fetchWithBaseUrl } as RequestInit,
+      )
+      if (res.status >= 200 && res.status < 300) {
+        itemsLocal.value = res.data.items
+        localNombre.value = res.data.local_nombre
+        fechaResp.value = res.data.fecha
+        itemsTotal.value = []
+        localesSinConteo.value = []
       }
     }
   } catch {
@@ -96,7 +90,7 @@ const consultar = async () => {
 
 const exportarCSV = () => {
   let rows: string[][] = []
-  if (modo.value === 'local') {
+  if (!esTotal.value) {
     rows = [['Producto', 'Objetivo', 'Actual', 'A comprar']]
     itemsLocal.value.forEach((i) =>
       rows.push([
@@ -115,13 +109,17 @@ const exportarCSV = () => {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `lista-compras-${modo.value}-${fecha.value || 'hoy'}.csv`
+  a.download = `lista-compras-${esTotal.value ? 'total' : 'local'}-${fecha.value || 'hoy'}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
 
-const formatNum = (n: number) =>
-  n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+const formatNum = (n: number | string | null | undefined) => {
+  if (n === null || n === undefined || n === '') return '-'
+  const num = typeof n === 'number' ? n : Number(n)
+  if (Number.isNaN(num)) return String(n)
+  return num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+}
 </script>
 
 <template>
@@ -153,34 +151,26 @@ const formatNum = (n: number) =>
 
     <!-- Filtros -->
     <div class="rounded-2xl border border-[var(--bg-300)]/50 bg-white p-4 shadow-sm">
-      <div class="grid gap-3 sm:grid-cols-[200px_1fr_180px_auto]">
-        <select
-          v-model="modo"
-          class="rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
-        >
-          <option value="local">Por local</option>
-          <option value="total">Total (todos los locales)</option>
-        </select>
+      <div class="grid gap-3 sm:grid-cols-[1fr_220px_auto]">
         <select
           v-model="localId"
-          :disabled="modo === 'total'"
-          class="rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30 disabled:bg-[var(--bg-100)]"
+          class="rounded-xl border border-[var(--bg-300)] bg-white px-4 py-3.5 text-base text-[var(--text-100)] focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
         >
-          <option :value="null" disabled>Seleccioná un local...</option>
-          <option v-for="l in locales" :key="l.id" :value="l.id">{{ l.nombre }}</option>
+          <option :value="null">🗂️ Todos los locales (total)</option>
+          <option v-for="l in locales" :key="l.id" :value="l.id">📍 {{ l.nombre }}</option>
         </select>
         <input
           v-model="fecha"
           type="date"
-          class="rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+          class="rounded-xl border border-[var(--bg-300)] bg-white px-4 py-3.5 text-base text-[var(--text-100)] focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
         />
-        <BaseButton :loading="cargando" @click="consultar">Consultar</BaseButton>
+        <BaseButton size="lg" :loading="cargando" @click="consultar">Consultar</BaseButton>
       </div>
     </div>
 
     <!-- Resultados por local -->
     <div
-      v-if="consultado && modo === 'local'"
+      v-if="consultado && !esTotal"
       class="rounded-2xl border border-[var(--bg-300)]/50 bg-white shadow-sm"
     >
       <div class="border-b border-[var(--bg-200)] p-4">
@@ -251,58 +241,78 @@ const formatNum = (n: number) =>
     </div>
 
     <!-- Resultados total -->
-    <div
-      v-if="consultado && modo === 'total'"
-      class="rounded-2xl border border-[var(--bg-300)]/50 bg-white shadow-sm"
-    >
-      <div class="border-b border-[var(--bg-200)] p-4">
-        <p class="text-sm text-[var(--text-200)]">
-          <span class="font-semibold text-[var(--text-100)]"
-            >Total agregado de todos los locales</span
-          >
-        </p>
+    <div v-if="consultado && esTotal" class="space-y-4">
+      <!-- Aviso locales sin conteo finalizado -->
+      <div
+        v-if="localesSinConteo.length > 0"
+        class="flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
+      >
+        <span class="text-lg">⚠️</span>
+        <div>
+          <p class="font-semibold">Locales sin conteo finalizado en la fecha</p>
+          <p class="mt-0.5 text-amber-800">
+            Estos locales no se incluyen en el total:
+            <span class="font-semibold">
+              {{ localesSinConteo.map((l) => l.local_nombre).join(', ') }}
+            </span>
+          </p>
+        </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
-              <th
-                class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Producto
-              </th>
-              <th
-                class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                A comprar
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="itemsTotal.length === 0">
-              <td colspan="2" class="px-6 py-12 text-center text-sm text-[var(--text-200)]">
-                No hay productos para comprar.
-              </td>
-            </tr>
-            <tr
-              v-else
-              v-for="(it, idx) in itemsTotal"
-              :key="`${it.producto_id}-${idx}`"
-              class="border-b border-[var(--bg-200)] hover:bg-[var(--bg-100)]/50"
+
+      <div class="rounded-2xl border border-[var(--bg-300)]/50 bg-white shadow-sm">
+        <div class="border-b border-[var(--bg-200)] p-4">
+          <p class="text-sm text-[var(--text-200)]">
+            <span class="font-semibold text-[var(--text-100)]">
+              Total agregado de todos los locales
+            </span>
+            <span v-if="fechaResp">
+              · Fecha:
+              <span class="font-semibold text-[var(--text-100)]">{{ fechaResp }}</span></span
             >
-              <td class="px-6 py-3 text-sm font-medium text-[var(--text-100)]">
-                {{ it.producto_nombre }}
-              </td>
-              <td class="px-6 py-3 text-right">
-                <span
-                  class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-sm font-bold text-rose-700"
+          </p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
+                <th
+                  class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
                 >
-                  {{ formatNum(it.cantidad_a_comprar) }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                  Producto
+                </th>
+                <th
+                  class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
+                >
+                  A comprar
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="itemsTotal.length === 0">
+                <td colspan="2" class="px-6 py-12 text-center text-sm text-[var(--text-200)]">
+                  No hay productos para comprar.
+                </td>
+              </tr>
+              <tr
+                v-else
+                v-for="(it, idx) in itemsTotal"
+                :key="`${it.producto_id}-${idx}`"
+                class="border-b border-[var(--bg-200)] hover:bg-[var(--bg-100)]/50"
+              >
+                <td class="px-6 py-3 text-sm font-medium text-[var(--text-100)]">
+                  {{ it.producto_nombre }}
+                </td>
+                <td class="px-6 py-3 text-right">
+                  <span
+                    class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-sm font-bold text-rose-700"
+                  >
+                    {{ formatNum(it.cantidad_a_comprar) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
