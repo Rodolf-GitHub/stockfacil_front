@@ -261,7 +261,7 @@ const abrirWizard = async (c: ConteoStockSchema) => {
       itemsExistentes.value = resItems.data
     }
     const primerSinContar = plantillaItems.value.findIndex(
-      (p) => !itemsExistentes.value.some((it) => it.producto === p.producto),
+      (p) => !itemsExistentes.value.some((it) => it.producto === p.producto_id),
     )
     stepIdx.value = primerSinContar >= 0 ? primerSinContar : 0
     sincronizarInput()
@@ -278,7 +278,7 @@ const stepActual = computed<PlantillaStockSchema | null>(
 const totalSteps = computed(() => plantillaItems.value.length)
 const itemActual = computed<ItemConteoStockSchema | null>(() => {
   if (!stepActual.value) return null
-  return itemsExistentes.value.find((it) => it.producto === stepActual.value!.producto) ?? null
+  return itemsExistentes.value.find((it) => it.producto === stepActual.value!.producto_id) ?? null
 })
 const itemsContados = computed(() => itemsExistentes.value.length)
 const progresoPct = computed(() => {
@@ -330,7 +330,7 @@ const guardarPaso = async (): Promise<boolean> => {
       const res = await conteostockApiCrearItem(
         {
           conteo_stock_id: conteoDetalle.value.id,
-          producto_id: stepActual.value.producto,
+          producto_id: stepActual.value.producto_id,
           cantidad_conteada: cant,
         },
         authOptions(),
@@ -810,12 +810,13 @@ const estadoClass = (estado?: string) => {
             Producto a contar
           </p>
           <h3 class="mt-1 text-xl font-bold text-[var(--text-100)] sm:text-2xl">
-            {{ productoNombre(stepActual.producto) }}
+            {{ stepActual.producto_nombre || productoNombre(stepActual.producto_id) }}
           </h3>
           <p class="mt-1 text-xs text-[var(--text-200)] sm:text-sm">
             Objetivo:
             <span class="font-semibold text-[var(--text-100)]">
-              {{ stepActual.cantidad_objetivo }} {{ productoUnidad(stepActual.producto) }}
+              {{ stepActual.cantidad_objetivo }}
+              {{ stepActual.producto_unidad_medida || productoUnidad(stepActual.producto_id) }}
             </span>
           </p>
 
@@ -837,7 +838,9 @@ const estadoClass = (estado?: string) => {
               <span
                 class="inline-flex shrink-0 max-w-[40%] items-center justify-center truncate rounded-lg bg-[var(--bg-100)] px-2.5 text-xs font-medium text-[var(--text-200)] sm:max-w-none sm:px-4 sm:text-sm"
               >
-                {{ productoUnidad(stepActual.producto) || '—' }}
+                {{
+                  stepActual.producto_unidad_medida || productoUnidad(stepActual.producto_id) || '—'
+                }}
               </span>
             </div>
             <p v-if="itemActual" class="mt-2 text-xs text-emerald-600">
@@ -856,12 +859,12 @@ const estadoClass = (estado?: string) => {
               :key="p.id ?? idx"
               type="button"
               @click="irAlPaso(idx)"
-              :title="productoNombre(p.producto)"
+              :title="p.producto_nombre || productoNombre(p.producto_id)"
               :class="[
                 'inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-semibold transition-colors',
                 idx === stepIdx
                   ? 'border-teal-600 bg-teal-600 text-white'
-                  : productoYaContado(p.producto)
+                  : productoYaContado(p.producto_id)
                     ? 'border-emerald-300 bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
                     : 'border-[var(--bg-300)] bg-white text-[var(--text-200)] hover:bg-[var(--bg-100)]',
               ]"
