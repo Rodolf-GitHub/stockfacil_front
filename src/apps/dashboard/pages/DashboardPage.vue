@@ -2,6 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
+  Circle,
   LayoutDashboard,
   Package,
   Store,
@@ -50,6 +51,26 @@ onMounted(cargar)
 
 const formatFecha = (fecha?: string | null) => {
   if (!fecha) return '—'
+  const hoy = new Date()
+  const fechaLocal = new Date(`${fecha}T00:00:00`)
+  if (Number.isNaN(fechaLocal.getTime())) {
+    const [y, m, d] = fecha.split('-')
+    return `${d}/${m}/${y}`
+  }
+
+  const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
+  const inicioFecha = new Date(
+    fechaLocal.getFullYear(),
+    fechaLocal.getMonth(),
+    fechaLocal.getDate(),
+  )
+  const msPorDia = 24 * 60 * 60 * 1000
+  const diffDias = Math.round((inicioHoy.getTime() - inicioFecha.getTime()) / msPorDia)
+
+  if (diffDias === 0) return 'Hoy'
+  if (diffDias === 1) return 'Ayer'
+  if (diffDias === 2) return 'Antier'
+
   const [y, m, d] = fecha.split('-')
   return `${d}/${m}/${y}`
 }
@@ -66,6 +87,33 @@ const estadoClass = (estado?: string | null) => {
 }
 
 const totalAComprar = computed(() => data.value?.productos_a_comprar_hoy ?? 0)
+
+const hoyISO = computed(() => {
+  const hoy = new Date()
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(
+    hoy.getDate(),
+  ).padStart(2, '0')}`
+})
+
+const estadoNegociosHoy = computed(() => {
+  const locales = data.value?.locales ?? []
+  return locales.map((loc) => {
+    const esHoy = loc.ultimo_conteo_fecha === hoyISO.value
+    if (esHoy && loc.ultimo_conteo_estado === 'finalizado') {
+      return { ...loc, estadoHoy: 'ya finalizado' as const }
+    }
+    if (esHoy) {
+      return { ...loc, estadoHoy: 'en proceso' as const }
+    }
+    return { ...loc, estadoHoy: 'falta' as const }
+  })
+})
+
+const estadoHoyClass = (estado: 'ya finalizado' | 'en proceso' | 'falta') => {
+  if (estado === 'ya finalizado') return 'bg-emerald-100 text-emerald-700'
+  if (estado === 'en proceso') return 'bg-amber-100 text-amber-700'
+  return 'bg-rose-100 text-rose-700'
+}
 </script>
 
 <template>
@@ -88,6 +136,55 @@ const totalAComprar = computed(() => data.value?.productos_a_comprar_hoy ?? 0)
             Bienvenido, <span class="font-semibold">{{ userEmail }}</span>
             <span v-if="esAdmin" class="ml-1">· Admin</span>
           </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card: conteos de hoy por negocio -->
+    <div class="rounded-2xl border border-[var(--bg-300)]/50 bg-white p-4 shadow-sm sm:p-5">
+      <div class="mb-3 flex items-center gap-2">
+        <Store :size="18" class="text-[var(--primary-100)]" />
+        <h2 class="text-base font-semibold text-[var(--text-100)] sm:text-lg">
+          Conteos de stock hoy
+        </h2>
+      </div>
+
+      <div v-if="cargando" class="space-y-2">
+        <div
+          v-for="n in 3"
+          :key="`hoy-sk-${n}`"
+          class="h-8 w-full animate-pulse rounded bg-[var(--bg-200)]"
+        ></div>
+      </div>
+
+      <div
+        v-else-if="estadoNegociosHoy.length === 0"
+        class="rounded-xl bg-[var(--bg-100)] p-3 text-sm text-[var(--text-200)]"
+      >
+        No hay negocios para mostrar.
+      </div>
+
+      <div v-else class="space-y-2">
+        <div
+          v-for="loc in estadoNegociosHoy"
+          :key="`hoy-${loc.local_id}`"
+          class="flex items-center justify-between gap-2 rounded-xl border border-[var(--bg-300)]/50 bg-[var(--bg-100)]/30 px-3 py-2"
+        >
+          <div class="min-w-0 flex items-center gap-2">
+            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-100">
+              <Store :size="14" class="text-indigo-600" />
+            </div>
+            <p class="truncate text-sm font-semibold text-[var(--text-100)]">
+              {{ loc.local_nombre }}
+            </p>
+          </div>
+          <span
+            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
+            :class="estadoHoyClass(loc.estadoHoy)"
+          >
+            <Circle :size="10" />
+            {{ loc.estadoHoy }}
+          </span>
         </div>
       </div>
     </div>
