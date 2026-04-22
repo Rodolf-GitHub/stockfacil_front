@@ -437,6 +437,36 @@ const formatFecha = (f?: string) => {
   return d.toLocaleDateString('es-AR')
 }
 
+const parseFechaLocal = (f: string) => {
+  const soloFecha = f.slice(0, 10)
+  const m = soloFecha.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) {
+    const d = new Date(f)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+}
+
+const inicioDelDia = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
+
+const formatFechaTabla = (f?: string) => {
+  if (!f) return '-'
+
+  const fecha = parseFechaLocal(f)
+  if (!fecha) return f
+
+  const hoy = inicioDelDia(new Date())
+  const diaFecha = inicioDelDia(fecha)
+  const msPorDia = 24 * 60 * 60 * 1000
+  const diferenciaDias = Math.round((hoy.getTime() - diaFecha.getTime()) / msPorDia)
+
+  if (diferenciaDias === 0) return 'Hoy'
+  if (diferenciaDias === 1) return 'Ayer'
+  if (diferenciaDias === 2) return 'Antier'
+
+  return fecha.toLocaleDateString('es-AR')
+}
+
 const estadoClass = (estado?: string) => {
   if (estado === 'finalizado') return 'bg-emerald-100 text-emerald-700'
   return 'bg-amber-100 text-amber-700'
@@ -553,7 +583,7 @@ const estadoClass = (estado?: string) => {
             <td
               class="whitespace-nowrap px-2 py-2.5 text-xs text-[var(--text-200)] sm:px-4 sm:py-3 sm:text-sm"
             >
-              {{ formatFecha(c.fecha) }}
+              {{ formatFechaTabla(c.fecha) }}
             </td>
             <td class="whitespace-nowrap px-2 py-2.5 sm:px-4 sm:py-3">
               <span

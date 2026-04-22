@@ -801,6 +801,10 @@
             "title": "Producto Nombre",
             "type": "string"
           },
+          "unidad_medida": {
+            "title": "Unidad Medida",
+            "type": "string"
+          },
           "cantidad_objetivo": {
             "title": "Cantidad Objetivo",
             "type": "number"
@@ -817,6 +821,7 @@
         "required": [
           "producto_id",
           "producto_nombre",
+          "unidad_medida",
           "cantidad_objetivo",
           "cantidad_actual",
           "cantidad_a_comprar"

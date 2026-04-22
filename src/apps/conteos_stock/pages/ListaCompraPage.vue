@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { ChevronDown, Download, ShoppingCart } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import { ChevronDown, ShoppingCart } from 'lucide-vue-next'
 import { conteostockApiResumenPorFecha } from '@/apps/conteos_stock/api'
 import type { LocalSinConteoSchema, ResumenConteoSchema } from '@/apps/conteos_stock/api/schemas'
 import { localApiListarLocales } from '@/apps/locales/api'
 import type { LocalSchema } from '@/apps/locales/api/schemas'
-import BaseButton from '@/components/BaseButton.vue'
 import { useNotification } from '@/composables/useNotification'
 import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
 
@@ -45,7 +44,6 @@ const cargarLocales = async () => {
 onMounted(async () => {
   fecha.value = new Date().toISOString().slice(0, 10)
   await cargarLocales()
-  await consultar()
 })
 
 const consultar = async () => {
@@ -65,8 +63,9 @@ const consultar = async () => {
       fechaResp.value = res.data.fecha
       // Expandir automáticamente si hay un solo local
       expandidos.value = new Set()
-      if (localesResumen.value.length === 1 && localesResumen.value[0].conteo_id) {
-        expandidos.value.add(localesResumen.value[0].conteo_id)
+      const unicoLocal = localesResumen.value[0]
+      if (localesResumen.value.length === 1 && unicoLocal?.conteo_id) {
+        expandidos.value.add(unicoLocal.conteo_id)
       }
     }
   } catch {
@@ -75,6 +74,29 @@ const consultar = async () => {
     cargando.value = false
   }
 }
+
+watch([localId, fecha], () => {
+  consultar()
+})
+
+const isoDate = (d: Date) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const fechaConOffset = (dias: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() + dias)
+  return isoDate(d)
+}
+
+const setFechaRapida = (dias: number) => {
+  fecha.value = fechaConOffset(dias)
+}
+
+const esFechaRapida = (dias: number) => fecha.value === fechaConOffset(dias)
 
 const toggle = (id: number) => {
   if (expandidos.value.has(id)) expandidos.value.delete(id)
@@ -169,20 +191,11 @@ const formatNum = (n: number | string | null | undefined) => {
           </p>
         </div>
       </div>
-      <button
-        v-if="consultado && hayDatos"
-        type="button"
-        @click="exportarCSV"
-        class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-rose-600 shadow-sm transition-all hover:bg-white/90"
-      >
-        <Download :size="16" />
-        Exportar CSV
-      </button>
     </div>
 
     <!-- Filtros -->
     <div class="rounded-2xl border border-[var(--bg-300)]/50 bg-white p-3 shadow-sm sm:p-4">
-      <div class="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
+      <div class="grid gap-2 sm:grid-cols-[1fr_180px]">
         <select
           v-model="localId"
           class="rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
@@ -195,7 +208,46 @@ const formatNum = (n: number | string | null | undefined) => {
           type="date"
           class="rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
         />
-        <BaseButton :loading="cargando" @click="consultar">Consultar</BaseButton>
+      </div>
+      <div class="mt-3 overflow-x-auto">
+        <div class="flex min-w-max flex-nowrap gap-2">
+          <button
+            type="button"
+            class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors sm:text-sm"
+            :class="
+              esFechaRapida(0)
+                ? 'border-rose-300 bg-rose-100 text-rose-700'
+                : 'border-[var(--bg-300)] bg-white text-[var(--text-100)] hover:bg-[var(--bg-100)]'
+            "
+            @click="setFechaRapida(0)"
+          >
+            Hoy
+          </button>
+          <button
+            type="button"
+            class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors sm:text-sm"
+            :class="
+              esFechaRapida(-1)
+                ? 'border-rose-300 bg-rose-100 text-rose-700'
+                : 'border-[var(--bg-300)] bg-white text-[var(--text-100)] hover:bg-[var(--bg-100)]'
+            "
+            @click="setFechaRapida(-1)"
+          >
+            Ayer
+          </button>
+          <button
+            type="button"
+            class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors sm:text-sm"
+            :class="
+              esFechaRapida(-2)
+                ? 'border-rose-300 bg-rose-100 text-rose-700'
+                : 'border-[var(--bg-300)] bg-white text-[var(--text-100)] hover:bg-[var(--bg-100)]'
+            "
+            @click="setFechaRapida(-2)"
+          >
+            Antier
+          </button>
+        </div>
       </div>
     </div>
 
@@ -371,7 +423,7 @@ const formatNum = (n: number | string | null | undefined) => {
       <ShoppingCart :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
       <p class="font-semibold text-[var(--text-100)]">Generá una lista de compras</p>
       <p class="mt-1 text-sm text-[var(--text-200)]">
-        Elegí el local (o todos) y la fecha, y pulsá Consultar.
+        Elegí el local (o todos) y la fecha para consultar automáticamente.
       </p>
     </div>
   </div>

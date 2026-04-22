@@ -8,6 +8,7 @@
 export interface ItemListaCompraSchema {
   producto_id: number;
   producto_nombre: string;
+  unidad_medida: string;
   cantidad_objetivo: number;
   cantidad_actual: number;
   cantidad_a_comprar: number;

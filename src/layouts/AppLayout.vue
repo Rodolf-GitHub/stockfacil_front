@@ -206,8 +206,8 @@ const cambiarPassword = async () => {
             </RouterLink>
           </li>
 
-          <!-- Locales -->
-          <li>
+          <!-- Locales (solo admin) -->
+          <li v-if="esAdmin">
             <RouterLink
               @click="closeSidebarOnMobile"
               to="/locales"
