@@ -46,7 +46,16 @@ const cargarLocales = async () => {
   }
 }
 
-onMounted(cargarLocales)
+onMounted(async () => {
+  await cargarLocales()
+  if (locales.value.length > 0 && locales.value[0].id != null) {
+    localId.value = locales.value[0].id
+  }
+  fecha.value = new Date().toISOString().slice(0, 10)
+  if (localId.value != null) {
+    await consultar()
+  }
+})
 
 const consultar = async () => {
   cargando.value = true

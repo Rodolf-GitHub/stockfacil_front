@@ -1,18 +1,28 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { CheckCircle2, ListChecks, Lock, Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  ListChecks,
+  Lock,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-vue-next'
 import {
   conteostockApiActualizarConteo,
   conteostockApiActualizarItem,
   conteostockApiCrearConteo,
   conteostockApiCrearItem,
   conteostockApiEliminarConteo,
-  conteostockApiEliminarItem,
   conteostockApiFinalizarConteo,
   conteostockApiListarConteos,
   conteostockApiListarItems,
 } from '@/apps/conteos_stock/api'
 import type { ConteoStockSchema, ItemConteoStockSchema } from '@/apps/conteos_stock/api/schemas'
+import { plantillastockApiListarPlantillas } from '@/apps/plantillas_stock/api'
+import type { PlantillaStockSchema } from '@/apps/plantillas_stock/api/schemas'
 import { localApiListarLocales } from '@/apps/locales/api'
 import type { LocalSchema } from '@/apps/locales/api/schemas'
 import { productoApiListarProductos } from '@/apps/productos/api'
@@ -53,15 +63,18 @@ const showDeleteModal = ref(false)
 const aEliminar = ref<ConteoStockSchema | null>(null)
 const eliminando = ref(false)
 
-// Detalle (items)
-const showDetalleModal = ref(false)
+// Wizard
+const showWizard = ref(false)
 const conteoDetalle = ref<ConteoStockSchema | null>(null)
-const items = ref<ItemConteoStockSchema[]>([])
-const cargandoItems = ref(false)
-const itemForm = ref({ producto_id: null as number | null, cantidad: '' })
-const guardandoItem = ref(false)
+const plantillaItems = ref<PlantillaStockSchema[]>([])
+const itemsExistentes = ref<ItemConteoStockSchema[]>([])
+const cargandoWizard = ref(false)
+const stepIdx = ref(0)
+const cantidadActual = ref<string | number>('')
+const guardandoPaso = ref(false)
 
-// Finalizar
+const esCantidadVacia = (v: string | number) =>
+  v === '' || v === null || v === undefined || (typeof v === 'number' && Number.isNaN(v))
 const finalizando = ref(false)
 
 const authOptions = (): RequestInit => ({
@@ -129,6 +142,9 @@ onMounted(() => {
 
 const localNombre = (id: number) => locales.value.find((l) => l.id === id)?.nombre ?? `#${id}`
 const productoNombre = (id: number) => productos.value.find((p) => p.id === id)?.nombre ?? `#${id}`
+const productoUnidad = (id: number) =>
+  (productos.value.find((p) => p.id === id) as { unidad_medida?: string } | undefined)
+    ?.unidad_medida ?? ''
 
 const abrirCrear = () => {
   crearForm.value = {
@@ -153,6 +169,10 @@ const crearConteo = async () => {
       success('Conteo creado')
       showCrearModal.value = false
       await cargar()
+      const nuevo = res.data
+      if (nuevo?.id) {
+        await abrirWizard(nuevo)
+      }
     }
   } catch {
     notifyError('Error al crear el conteo')
@@ -211,98 +231,166 @@ const confirmarEliminar = async () => {
   }
 }
 
-// --- Detalle / items ---
-const abrirDetalle = async (c: ConteoStockSchema) => {
+// --- Wizard guiado ---
+const abrirWizard = async (c: ConteoStockSchema) => {
   conteoDetalle.value = c
-  itemForm.value = { producto_id: null, cantidad: '' }
-  showDetalleModal.value = true
-  await cargarItems()
-}
-
-const cargarItems = async () => {
-  if (!conteoDetalle.value?.id) return
-  cargandoItems.value = true
+  stepIdx.value = 0
+  plantillaItems.value = []
+  itemsExistentes.value = []
+  cantidadActual.value = ''
+  showWizard.value = true
+  cargandoWizard.value = true
   try {
-    const res = await conteostockApiListarItems(conteoDetalle.value.id, {
-      ...authOptions(),
-      fetch: fetchWithBaseUrl,
-    } as RequestInit)
-    if (res.status >= 200 && res.status < 300) {
-      items.value = res.data
+    const [resPlant, resItems] = await Promise.all([
+      plantillastockApiListarPlantillas({ local_id: c.local, limit: 1000, offset: 0 }, {
+        ...authOptions(),
+        fetch: fetchWithBaseUrl,
+      } as RequestInit),
+      c.id
+        ? conteostockApiListarItems(c.id, {
+            ...authOptions(),
+            fetch: fetchWithBaseUrl,
+          } as RequestInit)
+        : Promise.resolve(null),
+    ])
+    if (resPlant.status >= 200 && resPlant.status < 300) {
+      plantillaItems.value = resPlant.data.items
     }
+    if (resItems && resItems.status >= 200 && resItems.status < 300) {
+      itemsExistentes.value = resItems.data
+    }
+    const primerSinContar = plantillaItems.value.findIndex(
+      (p) => !itemsExistentes.value.some((it) => it.producto === p.producto),
+    )
+    stepIdx.value = primerSinContar >= 0 ? primerSinContar : 0
+    sincronizarInput()
   } catch {
-    notifyError('Error al cargar los ítems')
+    notifyError('Error al cargar la plantilla del local')
   } finally {
-    cargandoItems.value = false
+    cargandoWizard.value = false
   }
 }
 
-const agregarItem = async () => {
-  if (!conteoDetalle.value?.id || itemForm.value.producto_id == null) return
-  const cant = Number(itemForm.value.cantidad)
+const stepActual = computed<PlantillaStockSchema | null>(
+  () => plantillaItems.value[stepIdx.value] ?? null,
+)
+const totalSteps = computed(() => plantillaItems.value.length)
+const itemActual = computed<ItemConteoStockSchema | null>(() => {
+  if (!stepActual.value) return null
+  return itemsExistentes.value.find((it) => it.producto === stepActual.value!.producto) ?? null
+})
+const itemsContados = computed(() => itemsExistentes.value.length)
+const progresoPct = computed(() => {
+  if (totalSteps.value === 0) return 0
+  return Math.round((itemsContados.value / totalSteps.value) * 100)
+})
+const todosContados = computed(
+  () => totalSteps.value > 0 && itemsContados.value >= totalSteps.value,
+)
+const esSoloLectura = computed(() => conteoDetalle.value?.estado === 'finalizado')
+
+const sincronizarInput = () => {
+  const v = itemActual.value?.cantidad_conteada
+  cantidadActual.value = v != null && v !== '' ? Number(v) : ''
+}
+
+const cantidadVacia = computed(() => esCantidadVacia(cantidadActual.value))
+
+watch(stepIdx, sincronizarInput)
+
+const guardarPaso = async (): Promise<boolean> => {
+  if (!conteoDetalle.value?.id || !stepActual.value || esSoloLectura.value) return true
+  if (cantidadVacia.value) {
+    notifyError('Ingresá una cantidad')
+    return false
+  }
+  const cant = Number(cantidadActual.value)
   if (Number.isNaN(cant) || cant < 0) {
     notifyError('Cantidad inválida')
-    return
+    return false
   }
-  guardandoItem.value = true
+  const existente = itemActual.value
+  if (existente && Number(existente.cantidad_conteada) === cant) {
+    return true
+  }
+  guardandoPaso.value = true
   try {
-    const res = await conteostockApiCrearItem(
-      {
-        conteo_stock_id: conteoDetalle.value.id,
-        producto_id: itemForm.value.producto_id,
-        cantidad_conteada: cant,
-      },
-      authOptions(),
-    )
-    if (res.status >= 200 && res.status < 300) {
-      itemForm.value = { producto_id: null, cantidad: '' }
-      await cargarItems()
+    if (existente?.id) {
+      const res = await conteostockApiActualizarItem(
+        existente.id,
+        { cantidad_conteada: cant },
+        authOptions(),
+      )
+      if (res.status >= 200 && res.status < 300) {
+        existente.cantidad_conteada = String(cant)
+        return true
+      }
+    } else {
+      const res = await conteostockApiCrearItem(
+        {
+          conteo_stock_id: conteoDetalle.value.id,
+          producto_id: stepActual.value.producto,
+          cantidad_conteada: cant,
+        },
+        authOptions(),
+      )
+      if (res.status >= 200 && res.status < 300) {
+        itemsExistentes.value.push(res.data)
+        return true
+      }
     }
+    notifyError('No se pudo guardar')
+    return false
   } catch {
-    notifyError('Error al agregar el ítem')
+    notifyError('Error al guardar')
+    return false
   } finally {
-    guardandoItem.value = false
+    guardandoPaso.value = false
   }
 }
 
-const actualizarCantidadItem = async (item: ItemConteoStockSchema, nueva: string) => {
-  if (!item.id) return
-  const cant = Number(nueva)
-  if (Number.isNaN(cant) || cant < 0) return
-  try {
-    const res = await conteostockApiActualizarItem(
-      item.id,
-      { cantidad_conteada: cant },
-      authOptions(),
-    )
-    if (res.status >= 200 && res.status < 300) {
-      item.cantidad_conteada = String(cant)
-    }
-  } catch {
-    notifyError('Error al actualizar el ítem')
+const irSiguiente = async () => {
+  const ok = await guardarPaso()
+  if (!ok) return
+  if (stepIdx.value < totalSteps.value - 1) {
+    stepIdx.value++
   }
 }
 
-const eliminarItem = async (item: ItemConteoStockSchema) => {
-  if (!item.id) return
-  try {
-    const res = await conteostockApiEliminarItem(item.id, authOptions())
-    if (res.status >= 200 && res.status < 300) {
-      items.value = items.value.filter((i) => i.id !== item.id)
-    }
-  } catch {
-    notifyError('Error al eliminar el ítem')
+const irAnterior = async () => {
+  if (!cantidadVacia.value && !esSoloLectura.value) {
+    await guardarPaso()
   }
+  if (stepIdx.value > 0) {
+    stepIdx.value--
+  }
+}
+
+const irAlPaso = async (idx: number) => {
+  if (idx === stepIdx.value) return
+  if (!cantidadVacia.value && !esSoloLectura.value) {
+    await guardarPaso()
+  }
+  stepIdx.value = idx
 }
 
 const finalizarConteo = async () => {
   if (!conteoDetalle.value?.id) return
+  if (!cantidadVacia.value && !esSoloLectura.value) {
+    const ok = await guardarPaso()
+    if (!ok) return
+  }
+  if (!todosContados.value) {
+    notifyError('Faltan productos por contar')
+    return
+  }
   finalizando.value = true
   try {
     const res = await conteostockApiFinalizarConteo(conteoDetalle.value.id, authOptions())
     if (res.status >= 200 && res.status < 300) {
       success('Conteo finalizado')
       conteoDetalle.value.estado = 'finalizado'
+      showWizard.value = false
       await cargar()
     }
   } catch {
@@ -311,6 +399,16 @@ const finalizarConteo = async () => {
     finalizando.value = false
   }
 }
+
+const cerrarWizard = async () => {
+  if (!cantidadVacia.value && !esSoloLectura.value && stepActual.value) {
+    await guardarPaso()
+  }
+  showWizard.value = false
+}
+
+const productoYaContado = (productoId: number) =>
+  itemsExistentes.value.some((it) => it.producto === productoId)
 
 const formatFecha = (f?: string) => {
   if (!f) return '-'
@@ -431,9 +529,8 @@ const estadoClass = (estado?: string) => {
               <td class="px-6 py-4">
                 <span
                   class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+                  >{{ localNombre(c.local) }}</span
                 >
-                  {{ localNombre(c.local) }}
-                </span>
               </td>
               <td class="px-6 py-4 font-medium text-[var(--text-100)]">
                 {{ formatFecha(c.fecha) }}
@@ -442,20 +539,19 @@ const estadoClass = (estado?: string) => {
                 <span
                   class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
                   :class="estadoClass(c.estado)"
+                  >{{ c.estado || 'abierto' }}</span
                 >
-                  {{ c.estado || 'abierto' }}
-                </span>
               </td>
               <td class="px-6 py-4">
                 <div class="flex justify-end gap-1">
                   <button
                     type="button"
-                    @click="abrirDetalle(c)"
-                    class="inline-flex items-center gap-1 rounded-lg border border-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-600 transition-colors hover:bg-teal-50"
-                    title="Ver ítems"
+                    @click="abrirWizard(c)"
+                    class="inline-flex items-center gap-1 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-teal-700"
+                    :title="c.estado === 'finalizado' ? 'Ver conteo' : 'Continuar conteo'"
                   >
                     <ListChecks :size="14" />
-                    Ítems
+                    {{ c.estado === 'finalizado' ? 'Ver' : 'Contar' }}
                   </button>
                   <button
                     v-if="c.estado !== 'finalizado'"
@@ -535,7 +631,7 @@ const estadoClass = (estado?: string) => {
     <template #footer>
       <BaseButton variant="secondary" @click="showCrearModal = false">Cancelar</BaseButton>
       <BaseButton :loading="creando" :disabled="crearForm.local_id == null" @click="crearConteo"
-        >Crear conteo</BaseButton
+        >Crear y empezar</BaseButton
       >
     </template>
   </BaseModal>
@@ -584,14 +680,14 @@ const estadoClass = (estado?: string) => {
     </template>
   </BaseModal>
 
-  <!-- Modal detalle (items) -->
+  <!-- Wizard guiado -->
   <BaseModal
-    :show="showDetalleModal"
-    title="Ítems del conteo"
+    :show="showWizard"
+    :title="esSoloLectura ? 'Detalle del conteo' : 'Conteo guiado'"
     size="lg"
-    @close="showDetalleModal = false"
+    @close="cerrarWizard"
   >
-    <div v-if="conteoDetalle" class="space-y-4">
+    <div v-if="conteoDetalle" class="space-y-5">
       <div class="flex flex-wrap items-center gap-3 rounded-xl bg-[var(--bg-100)] p-3 text-sm">
         <span class="font-semibold text-[var(--text-100)]">{{
           localNombre(conteoDetalle.local)
@@ -607,114 +703,146 @@ const estadoClass = (estado?: string) => {
         </span>
       </div>
 
-      <!-- Form agregar item -->
-      <div
-        v-if="conteoDetalle.estado !== 'finalizado'"
-        class="grid gap-2 rounded-xl border border-[var(--bg-200)] p-3 sm:grid-cols-[1fr_140px_auto]"
-      >
-        <select
-          v-model="itemForm.producto_id"
-          class="rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
-        >
-          <option :value="null" disabled>Producto...</option>
-          <option v-for="p in productos" :key="p.id" :value="p.id">{{ p.nombre }}</option>
-        </select>
-        <input
-          v-model="itemForm.cantidad"
-          type="number"
-          step="0.01"
-          min="0"
-          placeholder="Cantidad"
-          class="rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
-        />
-        <BaseButton
-          :loading="guardandoItem"
-          :disabled="itemForm.producto_id == null || !itemForm.cantidad"
-          @click="agregarItem"
-        >
-          <Plus :size="16" /> Agregar
-        </BaseButton>
+      <div v-if="cargandoWizard" class="py-12 text-center text-sm text-[var(--text-200)]">
+        Cargando plantilla...
       </div>
 
-      <!-- Lista items -->
-      <div class="overflow-x-auto rounded-xl border border-[var(--bg-200)]">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
-              <th
-                class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Producto
-              </th>
-              <th
-                class="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Cantidad
-              </th>
-              <th
-                class="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              ></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="cargandoItems">
-              <td colspan="3" class="px-4 py-6 text-center text-sm text-[var(--text-200)]">
-                Cargando...
-              </td>
-            </tr>
-            <tr v-else-if="items.length === 0">
-              <td colspan="3" class="px-4 py-6 text-center text-sm text-[var(--text-200)]">
-                Sin ítems aún
-              </td>
-            </tr>
-            <tr
-              v-else
-              v-for="it in items"
-              :key="it.id"
-              class="border-b border-[var(--bg-200)] last:border-0"
-            >
-              <td class="px-4 py-2 text-sm font-medium text-[var(--text-100)]">
-                {{ productoNombre(it.producto) }}
-              </td>
-              <td class="px-4 py-2 text-right">
-                <input
-                  :value="it.cantidad_conteada"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  :disabled="conteoDetalle.estado === 'finalizado'"
-                  @change="(e) => actualizarCantidadItem(it, (e.target as HTMLInputElement).value)"
-                  class="w-24 rounded border border-[var(--bg-300)] bg-white px-2 py-1 text-right text-sm focus:border-teal-500 focus:outline-none disabled:bg-[var(--bg-100)]"
-                />
-              </td>
-              <td class="px-4 py-2 text-right">
-                <button
-                  v-if="conteoDetalle.estado !== 'finalizado'"
-                  type="button"
-                  @click="eliminarItem(it)"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-200)] hover:bg-red-50 hover:text-red-600"
-                >
-                  <Trash2 :size="14" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <template #footer>
-      <BaseButton variant="secondary" @click="showDetalleModal = false">Cerrar</BaseButton>
-      <BaseButton
-        v-if="conteoDetalle && conteoDetalle.estado !== 'finalizado'"
-        variant="success"
-        :loading="finalizando"
-        @click="finalizarConteo"
+      <div
+        v-else-if="totalSteps === 0"
+        class="rounded-xl border border-dashed border-[var(--bg-300)] p-8 text-center"
       >
-        <CheckCircle2 :size="16" />
-        Finalizar conteo
+        <ListChecks :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
+        <p class="font-semibold text-[var(--text-100)]">
+          Este local no tiene plantilla configurada
+        </p>
+        <p class="mt-1 text-sm text-[var(--text-200)]">
+          Agregá productos a la plantilla del local para poder hacer conteos.
+        </p>
+      </div>
+
+      <template v-else>
+        <div>
+          <div class="mb-2 flex items-center justify-between text-sm">
+            <span class="font-medium text-[var(--text-100)]"
+              >Producto {{ stepIdx + 1 }} de {{ totalSteps }}</span
+            >
+            <span class="text-[var(--text-200)]"
+              >{{ itemsContados }} / {{ totalSteps }} contados ({{ progresoPct }}%)</span
+            >
+          </div>
+          <div class="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-200)]">
+            <div
+              class="h-full bg-teal-500 transition-all"
+              :style="{ width: `${progresoPct}%` }"
+            ></div>
+          </div>
+        </div>
+
+        <div
+          v-if="stepActual"
+          class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-6"
+        >
+          <p class="text-xs font-semibold uppercase tracking-wider text-teal-600">
+            Producto a contar
+          </p>
+          <h3 class="mt-1 text-2xl font-bold text-[var(--text-100)]">
+            {{ productoNombre(stepActual.producto) }}
+          </h3>
+          <p class="mt-1 text-sm text-[var(--text-200)]">
+            Objetivo:
+            <span class="font-semibold text-[var(--text-100)]">
+              {{ stepActual.cantidad_objetivo }} {{ productoUnidad(stepActual.producto) }}
+            </span>
+          </p>
+
+          <div class="mt-5">
+            <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">
+              Cantidad contada <span v-if="!esSoloLectura" class="text-red-500">*</span>
+            </label>
+            <div class="flex items-stretch gap-2">
+              <input
+                v-model="cantidadActual"
+                type="number"
+                step="0.01"
+                min="0"
+                :disabled="esSoloLectura"
+                placeholder="0"
+                class="flex-1 rounded-lg border border-[var(--bg-300)] bg-white px-4 py-3 text-lg font-semibold text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 disabled:bg-[var(--bg-100)]"
+                @keyup.enter="irSiguiente"
+              />
+              <span
+                class="inline-flex items-center rounded-lg bg-[var(--bg-100)] px-4 text-sm font-medium text-[var(--text-200)]"
+              >
+                {{ productoUnidad(stepActual.producto) || '—' }}
+              </span>
+            </div>
+            <p v-if="itemActual" class="mt-2 text-xs text-emerald-600">
+              ✓ Ya contado anteriormente: {{ itemActual.cantidad_conteada }}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]">
+            Saltar a producto
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <button
+              v-for="(p, idx) in plantillaItems"
+              :key="p.id ?? idx"
+              type="button"
+              @click="irAlPaso(idx)"
+              :title="productoNombre(p.producto)"
+              :class="[
+                'inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-semibold transition-colors',
+                idx === stepIdx
+                  ? 'border-teal-600 bg-teal-600 text-white'
+                  : productoYaContado(p.producto)
+                    ? 'border-emerald-300 bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                    : 'border-[var(--bg-300)] bg-white text-[var(--text-200)] hover:bg-[var(--bg-100)]',
+              ]"
+            >
+              {{ idx + 1 }}
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <template #footer>
+      <BaseButton variant="secondary" @click="cerrarWizard">
+        {{ esSoloLectura ? 'Cerrar' : 'Guardar y cerrar' }}
       </BaseButton>
+
+      <template v-if="totalSteps > 0 && !esSoloLectura">
+        <BaseButton variant="secondary" :disabled="stepIdx === 0" @click="irAnterior">
+          <ArrowLeft :size="16" />
+          Anterior
+        </BaseButton>
+
+        <BaseButton
+          v-if="stepIdx < totalSteps - 1"
+          :loading="guardandoPaso"
+          :disabled="cantidadVacia"
+          @click="irSiguiente"
+        >
+          Siguiente
+          <ArrowRight :size="16" />
+        </BaseButton>
+
+        <BaseButton
+          v-else
+          variant="success"
+          :loading="finalizando || guardandoPaso"
+          @click="finalizarConteo"
+        >
+          <CheckCircle2 :size="16" />
+          Finalizar conteo
+        </BaseButton>
+      </template>
+
       <span
-        v-else-if="conteoDetalle"
+        v-else-if="esSoloLectura"
         class="inline-flex items-center gap-1 text-sm text-[var(--text-200)]"
       >
         <Lock :size="14" /> Conteo finalizado
