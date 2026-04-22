@@ -1,0 +1,322 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NinjaAPI",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "paths": {
+    "/api/plantillas-stock/listar": {
+      "get": {
+        "operationId": "plantillastock_api_listar_plantillas",
+        "summary": "Listar Plantillas",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "local_id",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Local Id"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "busqueda",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Busqueda"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedPlantillaStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Plantillas de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/plantillas-stock/crear": {
+      "post": {
+        "operationId": "plantillastock_api_crear_plantilla",
+        "summary": "Crear Plantilla",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlantillaStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Plantillas de Stock"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlantillaStockCreateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/plantillas-stock/actualizar/{plantilla_id}": {
+      "put": {
+        "operationId": "plantillastock_api_actualizar_plantilla",
+        "summary": "Actualizar Plantilla",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plantilla_id",
+            "schema": {
+              "title": "Plantilla Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlantillaStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Plantillas de Stock"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlantillaStockUpdateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/plantillas-stock/eliminar/{plantilla_id}": {
+      "delete": {
+        "operationId": "plantillastock_api_eliminar_plantilla",
+        "summary": "Eliminar Plantilla",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plantilla_id",
+            "schema": {
+              "title": "Plantilla Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": ["Plantillas de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Input": {
+        "properties": {
+          "limit": {
+            "default": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "title": "Input",
+        "type": "object"
+      },
+      "PagedPlantillaStockSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlantillaStockSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "count"],
+        "title": "PagedPlantillaStockSchema",
+        "type": "object"
+      },
+      "PlantillaStockSchema": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "ID"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "local": {
+            "title": "Local",
+            "type": "integer"
+          },
+          "producto": {
+            "title": "Producto",
+            "type": "integer"
+          },
+          "cantidad_objetivo": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cantidad Objetivo",
+            "type": "string"
+          }
+        },
+        "required": ["created_at", "updated_at", "local", "producto", "cantidad_objetivo"],
+        "title": "PlantillaStockSchema",
+        "type": "object"
+      },
+      "PlantillaStockCreateSchema": {
+        "properties": {
+          "local_id": {
+            "title": "Local Id",
+            "type": "integer"
+          },
+          "producto_id": {
+            "title": "Producto Id",
+            "type": "integer"
+          },
+          "cantidad_objetivo": {
+            "title": "Cantidad Objetivo",
+            "type": "number"
+          }
+        },
+        "required": ["local_id", "producto_id", "cantidad_objetivo"],
+        "title": "PlantillaStockCreateSchema",
+        "type": "object"
+      },
+      "PlantillaStockUpdateSchema": {
+        "properties": {
+          "cantidad_objetivo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cantidad Objetivo"
+          }
+        },
+        "title": "PlantillaStockUpdateSchema",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "AuthBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "servers": []
+}

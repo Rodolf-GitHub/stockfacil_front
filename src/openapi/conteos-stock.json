@@ -1,0 +1,813 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NinjaAPI",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "paths": {
+    "/api/conteos-stock/listar": {
+      "get": {
+        "operationId": "conteostock_api_listar_conteos",
+        "summary": "Listar Conteos",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "local_id",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Local Id"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "fecha",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fecha"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedConteoStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/obtener/{conteo_id}": {
+      "get": {
+        "operationId": "conteostock_api_obtener_conteo",
+        "summary": "Obtener Conteo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conteo_id",
+            "schema": {
+              "title": "Conteo Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConteoStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/crear": {
+      "post": {
+        "operationId": "conteostock_api_crear_conteo",
+        "summary": "Crear Conteo",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConteoStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConteoStockCreateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/actualizar/{conteo_id}": {
+      "put": {
+        "operationId": "conteostock_api_actualizar_conteo",
+        "summary": "Actualizar Conteo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conteo_id",
+            "schema": {
+              "title": "Conteo Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConteoStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConteoStockUpdateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/finalizar/{conteo_id}": {
+      "post": {
+        "operationId": "conteostock_api_finalizar_conteo",
+        "summary": "Finalizar Conteo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conteo_id",
+            "schema": {
+              "title": "Conteo Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConteoStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/eliminar/{conteo_id}": {
+      "delete": {
+        "operationId": "conteostock_api_eliminar_conteo",
+        "summary": "Eliminar Conteo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conteo_id",
+            "schema": {
+              "title": "Conteo Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/items/listar/{conteo_id}": {
+      "get": {
+        "operationId": "conteostock_api_listar_items",
+        "summary": "Listar Items",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conteo_id",
+            "schema": {
+              "title": "Conteo Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ItemConteoStockSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/items/crear": {
+      "post": {
+        "operationId": "conteostock_api_crear_item",
+        "summary": "Crear Item",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemConteoStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemConteoStockCreateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/items/actualizar/{item_id}": {
+      "put": {
+        "operationId": "conteostock_api_actualizar_item",
+        "summary": "Actualizar Item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemConteoStockSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemConteoStockUpdateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/items/eliminar/{item_id}": {
+      "delete": {
+        "operationId": "conteostock_api_eliminar_item",
+        "summary": "Eliminar Item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/comprar/local": {
+      "get": {
+        "operationId": "conteostock_api_lista_compras_local",
+        "summary": "Lista Compras Local",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "local_id",
+            "schema": {
+              "title": "Local Id",
+              "type": "integer"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "fecha",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fecha"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaCompraLocalSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conteos-stock/comprar/total": {
+      "get": {
+        "operationId": "conteostock_api_lista_compras_total",
+        "summary": "Lista Compras Total",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "fecha",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fecha"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ItemListaCompraTotalSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Conteos de Stock"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Input": {
+        "properties": {
+          "limit": {
+            "default": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "title": "Input",
+        "type": "object"
+      },
+      "ConteoStockSchema": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "ID"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "local": {
+            "title": "Local",
+            "type": "integer"
+          },
+          "fecha": {
+            "format": "date",
+            "title": "Fecha",
+            "type": "string"
+          },
+          "estado": {
+            "default": "borrador",
+            "maxLength": 20,
+            "title": "Estado",
+            "type": "string"
+          },
+          "creado_por": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creado Por"
+          }
+        },
+        "required": ["created_at", "updated_at", "local"],
+        "title": "ConteoStockSchema",
+        "type": "object"
+      },
+      "PagedConteoStockSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConteoStockSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "count"],
+        "title": "PagedConteoStockSchema",
+        "type": "object"
+      },
+      "ConteoStockCreateSchema": {
+        "properties": {
+          "local_id": {
+            "title": "Local Id",
+            "type": "integer"
+          },
+          "fecha": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha"
+          }
+        },
+        "required": ["local_id"],
+        "title": "ConteoStockCreateSchema",
+        "type": "object"
+      },
+      "ConteoStockUpdateSchema": {
+        "properties": {
+          "fecha": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha"
+          }
+        },
+        "title": "ConteoStockUpdateSchema",
+        "type": "object"
+      },
+      "ItemConteoStockSchema": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "ID"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "conteo_stock": {
+            "title": "Conteo Stock",
+            "type": "integer"
+          },
+          "producto": {
+            "title": "Producto",
+            "type": "integer"
+          },
+          "cantidad_conteada": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cantidad Conteada",
+            "type": "string"
+          }
+        },
+        "required": ["created_at", "updated_at", "conteo_stock", "producto", "cantidad_conteada"],
+        "title": "ItemConteoStockSchema",
+        "type": "object"
+      },
+      "ItemConteoStockCreateSchema": {
+        "properties": {
+          "conteo_stock_id": {
+            "title": "Conteo Stock Id",
+            "type": "integer"
+          },
+          "producto_id": {
+            "title": "Producto Id",
+            "type": "integer"
+          },
+          "cantidad_conteada": {
+            "title": "Cantidad Conteada",
+            "type": "number"
+          }
+        },
+        "required": ["conteo_stock_id", "producto_id", "cantidad_conteada"],
+        "title": "ItemConteoStockCreateSchema",
+        "type": "object"
+      },
+      "ItemConteoStockUpdateSchema": {
+        "properties": {
+          "cantidad_conteada": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cantidad Conteada"
+          }
+        },
+        "title": "ItemConteoStockUpdateSchema",
+        "type": "object"
+      },
+      "ItemListaCompraSchema": {
+        "properties": {
+          "producto_id": {
+            "title": "Producto Id",
+            "type": "integer"
+          },
+          "producto_nombre": {
+            "title": "Producto Nombre",
+            "type": "string"
+          },
+          "cantidad_objetivo": {
+            "title": "Cantidad Objetivo",
+            "type": "number"
+          },
+          "cantidad_actual": {
+            "title": "Cantidad Actual",
+            "type": "number"
+          },
+          "cantidad_a_comprar": {
+            "title": "Cantidad A Comprar",
+            "type": "number"
+          }
+        },
+        "required": [
+          "producto_id",
+          "producto_nombre",
+          "cantidad_objetivo",
+          "cantidad_actual",
+          "cantidad_a_comprar"
+        ],
+        "title": "ItemListaCompraSchema",
+        "type": "object"
+      },
+      "ListaCompraLocalSchema": {
+        "properties": {
+          "local_id": {
+            "title": "Local Id",
+            "type": "integer"
+          },
+          "local_nombre": {
+            "title": "Local Nombre",
+            "type": "string"
+          },
+          "fecha": {
+            "format": "date",
+            "title": "Fecha",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemListaCompraSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": ["local_id", "local_nombre", "fecha", "items"],
+        "title": "ListaCompraLocalSchema",
+        "type": "object"
+      },
+      "ItemListaCompraTotalSchema": {
+        "properties": {
+          "producto_id": {
+            "title": "Producto Id",
+            "type": "integer"
+          },
+          "producto_nombre": {
+            "title": "Producto Nombre",
+            "type": "string"
+          },
+          "cantidad_a_comprar": {
+            "title": "Cantidad A Comprar",
+            "type": "number"
+          }
+        },
+        "required": ["producto_id", "producto_nombre", "cantidad_a_comprar"],
+        "title": "ItemListaCompraTotalSchema",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "AuthBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "servers": []
+}
