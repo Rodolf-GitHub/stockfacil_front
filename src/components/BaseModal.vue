@@ -28,7 +28,7 @@ const sizeClasses = {
     <Transition name="modal">
       <div
         v-if="show"
-        class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-900/50 p-4"
+        class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-900/50 p-2 sm:p-4"
       >
         <div
           :class="[
@@ -39,9 +39,9 @@ const sizeClasses = {
         >
           <!-- Header -->
           <div
-            class="flex-shrink-0 flex items-center justify-between border-b border-[var(--bg-300)] bg-gradient-to-r from-[var(--primary-100)] to-[var(--primary-200)] px-6 py-4 rounded-t-lg sticky top-0 z-10"
+            class="flex-shrink-0 flex items-center justify-between border-b border-[var(--bg-300)] bg-gradient-to-r from-[var(--primary-100)] to-[var(--primary-200)] px-4 sm:px-6 py-3 sm:py-4 rounded-t-lg sticky top-0 z-10"
           >
-            <h3 class="text-lg font-semibold text-white">
+            <h3 class="text-base sm:text-lg font-semibold text-white">
               {{ title }}
             </h3>
             <button
@@ -55,14 +55,14 @@ const sizeClasses = {
           </div>
 
           <!-- Body -->
-          <div class="flex-1 overflow-y-auto px-6 py-4">
+          <div class="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             <slot></slot>
           </div>
 
           <!-- Footer -->
           <div
             v-if="$slots.footer"
-            class="flex-shrink-0 flex items-center justify-end gap-3 border-t border-[var(--bg-300)] bg-[var(--bg-100)] px-6 py-4 rounded-b-lg"
+            class="flex-shrink-0 flex flex-wrap items-center justify-end gap-2 sm:gap-3 border-t border-[var(--bg-300)] bg-[var(--bg-100)] px-4 sm:px-6 py-3 sm:py-4 rounded-b-lg"
           >
             <slot name="footer"></slot>
           </div>

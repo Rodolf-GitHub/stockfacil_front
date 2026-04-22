@@ -79,7 +79,12 @@ const cargarLocales = async () => {
       ...authOptions(),
       fetch: fetchWithBaseUrl,
     } as RequestInit)
-    if (res.status >= 200 && res.status < 300) locales.value = res.data.items
+    if (res.status >= 200 && res.status < 300) {
+      locales.value = res.data.items
+      if (localFiltro.value == null && locales.value.length > 0 && locales.value[0].id != null) {
+        localFiltro.value = locales.value[0].id
+      }
+    }
   } catch {
     /* */
   }
@@ -104,7 +109,6 @@ watch([busqueda, localFiltro], () => {
 watch(offset, cargar)
 
 onMounted(() => {
-  cargar()
   cargarLocales()
   cargarProductos()
 })
@@ -244,110 +248,69 @@ const confirmarEliminar = async () => {
           v-model="localFiltro"
           class="rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
         >
-          <option :value="null">Todos los locales</option>
-          <option v-for="l in locales" :key="l.id" :value="l.id">{{ l.nombre }}</option>
+          <option v-for="l in locales" :key="l.id ?? l.nombre" :value="l.id">
+            {{ l.nombre }}
+          </option>
         </select>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
-              <th
-                class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Local
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Producto
-              </th>
-              <th
-                class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Cant. objetivo
-              </th>
-              <th
-                class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-if="cargando"
-              v-for="n in 5"
-              :key="`sk-${n}`"
-              class="border-b border-[var(--bg-200)]"
-            >
-              <td class="px-6 py-4">
-                <div class="h-5 w-32 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="h-5 w-40 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="ml-auto h-5 w-16 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="ml-auto h-8 w-24 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-            </tr>
+      <!-- Lista de plantillas: tarjetas compactas -->
+      <div class="divide-y divide-[var(--bg-200)]">
+        <template v-if="cargando">
+          <div v-for="n in 5" :key="`sk-${n}`" class="px-3 py-3 sm:px-4">
+            <div class="h-6 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
+          </div>
+        </template>
 
-            <tr v-else-if="plantillas.length === 0">
-              <td colspan="4" class="px-6 py-16 text-center">
-                <ClipboardList :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
-                <p class="font-semibold text-[var(--text-100)]">No hay plantillas</p>
-                <p class="mt-1 text-sm text-[var(--text-200)]">
-                  Creá la primera plantilla con el botón de arriba.
-                </p>
-              </td>
-            </tr>
+        <div v-else-if="plantillas.length === 0" class="px-4 py-12 text-center">
+          <ClipboardList :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
+          <p class="font-semibold text-[var(--text-100)]">No hay plantillas</p>
+          <p class="mt-1 text-sm text-[var(--text-200)]">
+            Creá la primera plantilla con el botón de arriba.
+          </p>
+        </div>
 
-            <tr
-              v-else
-              v-for="p in plantillas"
-              :key="p.id ?? `${p.local}-${p.producto}`"
-              class="border-b border-[var(--bg-200)] transition-colors hover:bg-[var(--bg-100)]/50"
+        <div
+          v-else
+          v-for="(p, idx) in plantillas"
+          :key="p.id ?? `idx-${idx}`"
+          class="flex items-center justify-between gap-2 px-3 py-2.5 transition-colors hover:bg-[var(--bg-100)]/40 sm:px-4 sm:py-3"
+        >
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-[var(--text-100)]">
+              {{ productoNombre(p.producto) }}
+            </p>
+            <p class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+              <span
+                class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"
+              >
+                {{ localNombre(p.local) }}
+              </span>
+              <span class="text-[var(--text-200)]">
+                Objetivo:
+                <span class="font-semibold text-[var(--text-100)]">{{ p.cantidad_objetivo }}</span>
+              </span>
+            </p>
+          </div>
+          <div class="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              @click="abrirEditar(p)"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
+              title="Editar"
             >
-              <td class="px-6 py-4">
-                <span
-                  class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700"
-                >
-                  {{ localNombre(p.local) }}
-                </span>
-              </td>
-              <td class="px-6 py-4 font-medium text-[var(--text-100)]">
-                {{ productoNombre(p.producto) }}
-              </td>
-              <td class="px-6 py-4 text-right font-semibold text-[var(--text-100)]">
-                {{ p.cantidad_objetivo }}
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    @click="abrirEditar(p)"
-                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600"
-                    title="Editar"
-                  >
-                    <Pencil :size="18" />
-                  </button>
-                  <button
-                    type="button"
-                    @click="abrirEliminar(p)"
-                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600"
-                    title="Eliminar"
-                  >
-                    <Trash2 :size="18" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              <Pencil :size="16" />
+            </button>
+            <button
+              type="button"
+              @click="abrirEliminar(p)"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
+              title="Eliminar"
+            >
+              <Trash2 :size="16" />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div
@@ -394,7 +357,7 @@ const confirmarEliminar = async () => {
           class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 disabled:bg-[var(--bg-100)]"
         >
           <option :value="null" disabled>Seleccioná un local...</option>
-          <option v-for="l in locales" :key="l.id" :value="l.id">{{ l.nombre }}</option>
+          <option v-for="l in locales" :key="l.id ?? l.nombre" :value="l.id">{{ l.nombre }}</option>
         </select>
       </div>
       <div>
@@ -407,7 +370,9 @@ const confirmarEliminar = async () => {
           class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 disabled:bg-[var(--bg-100)]"
         >
           <option :value="null" disabled>Seleccioná un producto...</option>
-          <option v-for="p in productos" :key="p.id" :value="p.id">{{ p.nombre }}</option>
+          <option v-for="p in productos" :key="p.id ?? p.nombre" :value="p.id">
+            {{ p.nombre }}
+          </option>
         </select>
       </div>
       <div>

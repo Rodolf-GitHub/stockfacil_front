@@ -185,94 +185,61 @@ const confirmarEliminar = async () => {
         </div>
       </div>
 
-      <!-- Tabla -->
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
-              <th
-                class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Nombre
-              </th>
-              <th
-                class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Loading skeleton -->
-            <tr
-              v-if="cargando"
-              v-for="n in 5"
-              :key="`sk-${n}`"
-              class="border-b border-[var(--bg-200)]"
-            >
-              <td class="px-6 py-4">
-                <div class="h-5 w-48 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="ml-auto h-8 w-24 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-            </tr>
+      <!-- Lista de locales: tarjetas compactas -->
+      <div class="divide-y divide-[var(--bg-200)]">
+        <template v-if="cargando">
+          <div v-for="n in 5" :key="`sk-${n}`" class="px-3 py-3 sm:px-4">
+            <div class="h-6 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
+          </div>
+        </template>
 
-            <!-- Vacío -->
-            <tr v-else-if="locales.length === 0">
-              <td colspan="2" class="px-6 py-16 text-center">
-                <MapPin :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
-                <p class="font-semibold text-[var(--text-100)]">No hay locales</p>
-                <p class="mt-1 text-sm text-[var(--text-200)]">
-                  {{
-                    busqueda
-                      ? 'Ningún local coincide con la búsqueda.'
-                      : 'Agregá el primer local con el botón de arriba.'
-                  }}
-                </p>
-              </td>
-            </tr>
+        <div v-else-if="locales.length === 0" class="px-4 py-12 text-center">
+          <MapPin :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
+          <p class="font-semibold text-[var(--text-100)]">No hay locales</p>
+          <p class="mt-1 text-sm text-[var(--text-200)]">
+            {{
+              busqueda
+                ? 'Ningún local coincide con la búsqueda.'
+                : 'Agregá el primer local con el botón de arriba.'
+            }}
+          </p>
+        </div>
 
-            <!-- Filas -->
-            <tr
-              v-else
-              v-for="local in locales"
-              :key="local.id ?? local.nombre"
-              class="border-b border-[var(--bg-200)] transition-colors hover:bg-[var(--bg-100)]/50"
+        <div
+          v-else
+          v-for="local in locales"
+          :key="local.id ?? local.nombre"
+          class="flex items-center justify-between gap-2 px-3 py-2.5 transition-colors hover:bg-[var(--bg-100)]/40 sm:px-4 sm:py-3"
+        >
+          <div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+            <div
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--primary-100)]/10 sm:h-10 sm:w-10"
             >
-              <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--primary-100)]/10"
-                  >
-                    <MapPin :size="16" class="text-[var(--primary-100)]" />
-                  </div>
-                  <span class="font-medium text-[var(--text-100)]">{{ local.nombre }}</span>
-                </div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex justify-end gap-1">
-                  <button
-                    type="button"
-                    @click="abrirEditar(local)"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-200)] transition-colors hover:bg-[var(--primary-100)]/10 hover:text-[var(--primary-100)]"
-                    title="Editar"
-                  >
-                    <Pencil :size="16" />
-                  </button>
-                  <button
-                    type="button"
-                    @click="abrirEliminar(local)"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-200)] transition-colors hover:bg-red-50 hover:text-red-600"
-                    title="Eliminar"
-                  >
-                    <Trash2 :size="16" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              <MapPin :size="16" class="text-[var(--primary-100)]" />
+            </div>
+            <span class="truncate text-sm font-medium text-[var(--text-100)]">{{
+              local.nombre
+            }}</span>
+          </div>
+          <div class="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              @click="abrirEditar(local)"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
+              title="Editar"
+            >
+              <Pencil :size="16" />
+            </button>
+            <button
+              type="button"
+              @click="abrirEliminar(local)"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
+              title="Eliminar"
+            >
+              <Trash2 :size="16" />
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Paginación -->

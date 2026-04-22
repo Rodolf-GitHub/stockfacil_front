@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
-  ChevronDown,
   ListChecks,
   Lock,
   Pencil,
@@ -41,12 +40,6 @@ const { success, error: notifyError } = useNotification()
 const LIMIT = 12
 
 const conteos = ref<ConteoStockSchema[]>([])
-const expandedConteos = ref<Set<number | string>>(new Set())
-const toggleConteo = (key: number | string) => {
-  if (expandedConteos.value.has(key)) expandedConteos.value.delete(key)
-  else expandedConteos.value.add(key)
-  expandedConteos.value = new Set(expandedConteos.value)
-}
 const total = ref(0)
 const offset = ref(0)
 const localFiltro = ref<number | null>(null)
@@ -120,7 +113,13 @@ const cargarLocales = async () => {
       ...authOptions(),
       fetch: fetchWithBaseUrl,
     } as RequestInit)
-    if (res.status >= 200 && res.status < 300) locales.value = res.data.items
+    if (res.status >= 200 && res.status < 300) {
+      locales.value = res.data.items
+      // Preseleccionar primer local si todavía no hay seleccionado
+      if (localFiltro.value == null && locales.value.length > 0 && locales.value[0].id != null) {
+        localFiltro.value = locales.value[0].id
+      }
+    }
   } catch {
     /* */
   }
@@ -145,7 +144,6 @@ watch([localFiltro, fechaFiltro], () => {
 watch(offset, cargar)
 
 onMounted(() => {
-  cargar()
   cargarLocales()
   cargarProductos()
 })
@@ -475,13 +473,14 @@ const estadoClass = (estado?: string) => {
     </div>
 
     <div class="rounded-2xl border border-[var(--bg-300)]/50 bg-white shadow-sm">
-      <div class="grid gap-3 border-b border-[var(--bg-200)] p-4 sm:grid-cols-[1fr_180px]">
+      <div class="grid gap-3 border-b border-[var(--bg-200)] p-3 sm:grid-cols-[1fr_180px] sm:p-4">
         <select
           v-model="localFiltro"
           class="rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
         >
-          <option :value="null">Todos los locales</option>
-          <option v-for="l in locales" :key="l.id" :value="l.id">{{ l.nombre }}</option>
+          <option v-for="l in locales" :key="l.id ?? l.nombre" :value="l.id">
+            {{ l.nombre }}
+          </option>
         </select>
         <input
           v-model="fechaFiltro"
@@ -490,7 +489,7 @@ const estadoClass = (estado?: string) => {
         />
       </div>
 
-      <!-- Listado de conteos: tarjetas colapsables -->
+      <!-- Listado de conteos: tarjetas compactas con acciones siempre visibles -->
       <div class="divide-y divide-[var(--bg-200)]">
         <template v-if="cargando">
           <div v-for="n in 5" :key="`sk-${n}`" class="px-3 py-3 sm:px-4">
@@ -510,84 +509,60 @@ const estadoClass = (estado?: string) => {
           v-else
           v-for="c in conteos"
           :key="c.id ?? `${c.local}-${c.fecha}`"
-          class="transition-colors hover:bg-[var(--bg-100)]/40"
+          class="flex items-center justify-between gap-2 px-3 py-2.5 transition-colors hover:bg-[var(--bg-100)]/40 sm:px-4 sm:py-3"
         >
-          <!-- Encabezado siempre visible -->
-          <button
-            type="button"
-            class="flex w-full items-center justify-between gap-2 px-3 py-3 text-left sm:px-4"
-            @click="toggleConteo(c.id ?? `${c.local}-${c.fecha}`)"
-          >
-            <div class="flex min-w-0 flex-1 items-center gap-2">
-              <span
-                class="inline-flex shrink-0 items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700"
-              >
-                {{ localNombre(c.local) }}
-              </span>
-              <span class="truncate text-sm font-medium text-[var(--text-100)]">
+          <div class="flex min-w-0 flex-1 flex-col gap-1">
+            <div class="flex min-w-0 items-center gap-2">
+              <span class="truncate text-sm font-semibold text-[var(--text-100)]">
                 {{ formatFecha(c.fecha) }}
               </span>
-            </div>
-            <div class="flex shrink-0 items-center gap-2">
               <span
-                class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize"
+                class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
                 :class="estadoClass(c.estado)"
               >
                 {{ c.estado || 'abierto' }}
               </span>
-              <ChevronDown
-                :size="18"
-                class="text-[var(--text-200)] transition-transform"
-                :class="{
-                  'rotate-180': expandedConteos.has(c.id ?? `${c.local}-${c.fecha}`),
-                }"
-              />
             </div>
-          </button>
-
-          <!-- Cuerpo expandido: acciones -->
-          <div
-            v-if="expandedConteos.has(c.id ?? `${c.local}-${c.fecha}`)"
-            class="border-t border-[var(--bg-200)] bg-[var(--bg-100)]/30 px-3 py-3 sm:px-4"
-          >
-            <div class="flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                @click.stop="abrirWizard(c)"
-                class="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700"
-                :title="c.estado === 'finalizado' ? 'Ver conteo' : 'Continuar conteo'"
-              >
-                <ListChecks :size="16" />
-                {{ c.estado === 'finalizado' ? 'Ver' : 'Contar' }}
-              </button>
-              <button
-                v-if="c.estado !== 'finalizado'"
-                type="button"
-                @click.stop="abrirEditar(c)"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600"
-                title="Editar fecha"
-              >
-                <Pencil :size="18" />
-              </button>
-              <button
-                v-if="c.estado === 'finalizado'"
-                type="button"
-                @click.stop="reabrirConteo(c)"
-                :disabled="reabriendo"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50"
-                title="Reabrir conteo"
-              >
-                <RotateCcw :size="18" />
-              </button>
-              <button
-                type="button"
-                @click.stop="abrirEliminar(c)"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600"
-                title="Eliminar"
-              >
-                <Trash2 :size="18" />
-              </button>
-            </div>
+          </div>
+          <div class="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              @click="abrirWizard(c)"
+              class="inline-flex h-9 items-center gap-1 rounded-lg bg-teal-600 px-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 sm:h-10 sm:gap-1.5 sm:px-3 sm:text-sm"
+              :title="c.estado === 'finalizado' ? 'Ver conteo' : 'Continuar conteo'"
+            >
+              <ListChecks :size="16" />
+              <span class="hidden sm:inline">{{
+                c.estado === 'finalizado' ? 'Ver' : 'Contar'
+              }}</span>
+            </button>
+            <button
+              v-if="c.estado !== 'finalizado'"
+              type="button"
+              @click="abrirEditar(c)"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
+              title="Editar fecha"
+            >
+              <Pencil :size="16" />
+            </button>
+            <button
+              v-if="c.estado === 'finalizado'"
+              type="button"
+              @click="reabrirConteo(c)"
+              :disabled="reabriendo"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50 sm:h-10 sm:w-10"
+              title="Reabrir conteo"
+            >
+              <RotateCcw :size="16" />
+            </button>
+            <button
+              type="button"
+              @click="abrirEliminar(c)"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
+              title="Eliminar"
+            >
+              <Trash2 :size="16" />
+            </button>
           </div>
         </div>
       </div>
@@ -702,8 +677,10 @@ const estadoClass = (estado?: string) => {
     size="lg"
     @close="cerrarWizard"
   >
-    <div v-if="conteoDetalle" class="space-y-5">
-      <div class="flex flex-wrap items-center gap-3 rounded-xl bg-[var(--bg-100)] p-3 text-sm">
+    <div v-if="conteoDetalle" class="space-y-4 sm:space-y-5">
+      <div
+        class="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--bg-100)] p-2.5 text-xs sm:gap-3 sm:p-3 sm:text-sm"
+      >
         <span class="font-semibold text-[var(--text-100)]">{{
           localNombre(conteoDetalle.local)
         }}</span>
@@ -711,7 +688,7 @@ const estadoClass = (estado?: string) => {
         <span class="text-[var(--text-200)]">{{ formatFecha(conteoDetalle.fecha) }}</span>
         <span class="text-[var(--text-200)]">·</span>
         <span
-          class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize"
+          class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize"
           :class="estadoClass(conteoDetalle.estado)"
         >
           {{ conteoDetalle.estado || 'abierto' }}
@@ -755,22 +732,22 @@ const estadoClass = (estado?: string) => {
 
         <div
           v-if="stepActual"
-          class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-6"
+          class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-4 sm:p-6"
         >
-          <p class="text-xs font-semibold uppercase tracking-wider text-teal-600">
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-teal-600 sm:text-xs">
             Producto a contar
           </p>
-          <h3 class="mt-1 text-2xl font-bold text-[var(--text-100)]">
+          <h3 class="mt-1 text-xl font-bold text-[var(--text-100)] sm:text-2xl">
             {{ productoNombre(stepActual.producto) }}
           </h3>
-          <p class="mt-1 text-sm text-[var(--text-200)]">
+          <p class="mt-1 text-xs text-[var(--text-200)] sm:text-sm">
             Objetivo:
             <span class="font-semibold text-[var(--text-100)]">
               {{ stepActual.cantidad_objetivo }} {{ productoUnidad(stepActual.producto) }}
             </span>
           </p>
 
-          <div class="mt-5">
+          <div class="mt-4 sm:mt-5">
             <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">
               Cantidad contada <span v-if="!esSoloLectura" class="text-red-500">*</span>
             </label>
@@ -782,11 +759,11 @@ const estadoClass = (estado?: string) => {
                 min="0"
                 :disabled="esSoloLectura"
                 placeholder="0"
-                class="flex-1 rounded-lg border border-[var(--bg-300)] bg-white px-4 py-3 text-lg font-semibold text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 disabled:bg-[var(--bg-100)]"
+                class="min-w-0 flex-1 rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2.5 text-base font-semibold text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 disabled:bg-[var(--bg-100)] sm:px-4 sm:py-3 sm:text-lg"
                 @keyup.enter="irSiguiente"
               />
               <span
-                class="inline-flex items-center rounded-lg bg-[var(--bg-100)] px-4 text-sm font-medium text-[var(--text-200)]"
+                class="inline-flex shrink-0 max-w-[40%] items-center justify-center truncate rounded-lg bg-[var(--bg-100)] px-2.5 text-xs font-medium text-[var(--text-200)] sm:max-w-none sm:px-4 sm:text-sm"
               >
                 {{ productoUnidad(stepActual.producto) || '—' }}
               </span>
