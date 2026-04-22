@@ -136,6 +136,10 @@ const itemsTotalAgregado = computed(() => {
   return Array.from(map.values()).sort((a, b) => a.producto_nombre.localeCompare(b.producto_nombre))
 })
 
+const totalAComprarAgregado = computed(() =>
+  itemsTotalAgregado.value.reduce((acc, it) => acc + (Number(it.cantidad_a_comprar) || 0), 0),
+)
+
 const hayDatos = computed(
   () => localesResumen.value.some((l) => l.items.length > 0) || itemsTotalAgregado.value.length > 0,
 )
@@ -377,8 +381,16 @@ const formatNum = (n: number | string | null | undefined) => {
         v-if="esTotal && itemsTotalAgregado.length > 0 && localesResumen.length > 1"
         class="overflow-hidden rounded-2xl border-2 border-rose-300 bg-white shadow-sm"
       >
-        <div class="border-b border-rose-200 bg-rose-50 px-3 py-3 sm:px-4">
+        <div
+          class="flex items-center justify-between gap-2 border-b border-rose-200 bg-rose-50 px-3 py-3 sm:px-4"
+        >
           <p class="text-sm font-bold text-rose-700">Σ Total agregado de todos los locales</p>
+          <p class="whitespace-nowrap text-xs font-semibold text-rose-700 sm:text-sm">
+            Σ
+            <span class="rounded-full bg-rose-100 px-2 py-0.5 text-rose-800">
+              {{ formatNum(totalAComprarAgregado) }}
+            </span>
+          </p>
         </div>
         <table class="w-full">
           <thead>
