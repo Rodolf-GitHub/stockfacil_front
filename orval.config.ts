@@ -49,4 +49,12 @@ export default defineConfig({
       client: 'fetch',
     },
   },
+  dashboard: {
+    input: './src/openapi/dashboard.json',
+    output: {
+      target: './src/apps/dashboard/api/index.ts',
+      schemas: './src/apps/dashboard/api/schemas',
+      client: 'fetch',
+    },
+  },
 })
