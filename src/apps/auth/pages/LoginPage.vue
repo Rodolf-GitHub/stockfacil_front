@@ -1,20 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import {
-  Eye,
-  EyeOff,
-  LockKeyhole,
-  Mail,
-  Package,
-  Share2,
-  Sparkles,
-  TriangleAlert,
-} from 'lucide-vue-next'
+import { Eye, EyeOff, LockKeyhole, Mail, Share2, TriangleAlert } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { authApiLogin } from '@/apps/auth/api'
 import type { LoginSchema } from '@/apps/auth/api/schemas'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseModal from '@/components/BaseModal.vue'
+import InstallBanner from '@/apps/ayuda/components/InstallBanner.vue'
 
 const router = useRouter()
 const LOGIN_TIMEOUT_MS = 12000
@@ -210,15 +202,19 @@ const handleLogin = async () => {
     <div class="login-orb login-orb--right" aria-hidden="true"></div>
 
     <div class="w-full max-w-md space-y-5">
+      <InstallBanner compact title="Instala la app" subtitle="" />
+
       <header class="space-y-2 text-center">
-        <div class="mx-auto flex items-center justify-center gap-2">
-          <Package :size="36" class="text-[var(--primary-100)]" />
-        </div>
-        <div
-          class="mx-auto inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-[var(--primary-100)] shadow-sm ring-1 ring-[var(--primary-100)]/20"
-        >
-          <Sparkles :size="14" />
-          StockFácil
+        <div class="mx-auto flex items-center justify-center">
+          <div
+            class="rounded-[2rem] bg-gradient-to-br from-white via-sky-50 to-blue-100 p-2.5 shadow-[0_16px_36px_rgba(37,99,235,0.24)] ring-1 ring-white/80"
+          >
+            <img
+              src="/imagen.png"
+              alt="StockFacil"
+              class="h-28 w-28 rounded-[1.1rem] object-cover shadow-md ring-2 ring-white"
+            />
+          </div>
         </div>
         <h1 class="text-3xl font-bold tracking-tight text-[var(--text-100)]">Iniciar sesion</h1>
         <p class="text-sm text-[var(--text-200)]">Ingresa con tu email y contraseña.</p>
