@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ChevronDown, ShoppingCart } from 'lucide-vue-next'
 import { conteostockApiResumenPorFecha } from '@/apps/conteos_stock/api'
 import type { LocalSinConteoSchema, ResumenConteoSchema } from '@/apps/conteos_stock/api/schemas'
@@ -9,6 +10,7 @@ import { useNotification } from '@/composables/useNotification'
 import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
 
 const { error: notifyError } = useNotification()
+const router = useRouter()
 
 // localId === null  -> Todos los locales
 // localId === number -> ese local
@@ -97,6 +99,47 @@ const setFechaRapida = (dias: number) => {
 }
 
 const esFechaRapida = (dias: number) => fecha.value === fechaConOffset(dias)
+
+const verListaCompraCompleta = () => {
+  type ItemListaNatural = {
+    producto_id: number
+    producto_nombre: string
+    unidad_medida: string
+    cantidad_a_comprar: number
+  }
+
+  const itemsParaLista: ItemListaNatural[] = esTotal.value
+    ? itemsTotalAgregado.value.map((it) => ({
+        producto_id: it.producto_id,
+        producto_nombre: it.producto_nombre,
+        unidad_medida: it.unidad_medida,
+        cantidad_a_comprar: Number(it.cantidad_a_comprar) || 0,
+      }))
+    : (localesResumen.value[0]?.items ?? []).map((it) => ({
+        producto_id: it.producto_id,
+        producto_nombre: it.producto_nombre,
+        unidad_medida: it.unidad_medida,
+        cantidad_a_comprar: Number(it.cantidad_a_comprar) || 0,
+      }))
+
+  const snapshot = {
+    fecha: fecha.value,
+    localId: localId.value,
+    localNombre:
+      localId.value == null
+        ? 'Todos los negocios'
+        : (locales.value.find((l) => l.id === localId.value)?.nombre ?? 'Negocio'),
+    items: itemsParaLista
+      .filter((it) => it.cantidad_a_comprar > 0)
+      .sort((a, b) => a.producto_nombre.localeCompare(b.producto_nombre)),
+    localesSinConteo: localesSinConteo.value.map((l) => l.local_nombre),
+  }
+
+  sessionStorage.setItem('compras_lista_snapshot', JSON.stringify(snapshot))
+  router.push({
+    name: 'compras-completa',
+  })
+}
 
 const toggle = (id: number) => {
   if (expandidos.value.has(id)) expandidos.value.delete(id)
@@ -201,6 +244,13 @@ const formatNum = (n: number | string | null | undefined) => {
           </p>
         </div>
       </div>
+      <button
+        type="button"
+        @click="verListaCompraCompleta"
+        class="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition-colors hover:bg-rose-50"
+      >
+        Ver en formato de lista
+      </button>
     </div>
 
     <!-- Filtros -->
