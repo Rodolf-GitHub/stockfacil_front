@@ -2,13 +2,16 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
+  ClipboardList,
   KeyRound,
   LayoutDashboard,
   Link2,
+  ListChecks,
   LogOut,
   MapPin,
   Menu,
   Package,
+  ShoppingCart,
   User,
   Users,
 } from 'lucide-vue-next'
@@ -253,6 +256,60 @@ const cambiarPassword = async () => {
               <span class="flex flex-col">
                 <span class="text-sm font-semibold">Asignaciones</span>
                 <span class="text-xs text-[var(--text-200)]">Usuarios y locales</span>
+              </span>
+            </RouterLink>
+          </li>
+
+          <!-- Plantillas -->
+          <li>
+            <RouterLink
+              @click="closeSidebarOnMobile"
+              to="/plantillas"
+              class="nav-link"
+              active-class="nav-link-active"
+            >
+              <span class="nav-icon bg-cyan-100 text-cyan-600">
+                <ClipboardList class="h-5 w-5" :stroke-width="2" />
+              </span>
+              <span class="flex flex-col">
+                <span class="text-sm font-semibold">Plantillas</span>
+                <span class="text-xs text-[var(--text-200)]">Objetivos de stock</span>
+              </span>
+            </RouterLink>
+          </li>
+
+          <!-- Conteos -->
+          <li>
+            <RouterLink
+              @click="closeSidebarOnMobile"
+              to="/conteos"
+              class="nav-link"
+              active-class="nav-link-active"
+            >
+              <span class="nav-icon bg-teal-100 text-teal-600">
+                <ListChecks class="h-5 w-5" :stroke-width="2" />
+              </span>
+              <span class="flex flex-col">
+                <span class="text-sm font-semibold">Conteos</span>
+                <span class="text-xs text-[var(--text-200)]">Conteos de stock</span>
+              </span>
+            </RouterLink>
+          </li>
+
+          <!-- Lista de compras -->
+          <li>
+            <RouterLink
+              @click="closeSidebarOnMobile"
+              to="/compras"
+              class="nav-link"
+              active-class="nav-link-active"
+            >
+              <span class="nav-icon bg-orange-100 text-orange-600">
+                <ShoppingCart class="h-5 w-5" :stroke-width="2" />
+              </span>
+              <span class="flex flex-col">
+                <span class="text-sm font-semibold">Compras</span>
+                <span class="text-xs text-[var(--text-200)]">Lista de compras</span>
               </span>
             </RouterLink>
           </li>

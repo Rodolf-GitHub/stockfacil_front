@@ -6,6 +6,9 @@ import ProductosPage from '@/apps/productos/pages/ProductosPage.vue'
 import LocalesPage from '@/apps/locales/pages/LocalesPage.vue'
 import AsignacionesPage from '@/apps/locales/pages/AsignacionesPage.vue'
 import UsuariosPage from '@/apps/usuarios/pages/UsuariosPage.vue'
+import PlantillasStockPage from '@/apps/plantillas_stock/pages/PlantillasStockPage.vue'
+import ConteosStockPage from '@/apps/conteos_stock/pages/ConteosStockPage.vue'
+import ListaCompraPage from '@/apps/conteos_stock/pages/ListaCompraPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -43,6 +46,21 @@ const router = createRouter({
           path: '/asignaciones',
           name: 'asignaciones',
           component: AsignacionesPage,
+        },
+        {
+          path: '/plantillas',
+          name: 'plantillas',
+          component: PlantillasStockPage,
+        },
+        {
+          path: '/conteos',
+          name: 'conteos',
+          component: ConteosStockPage,
+        },
+        {
+          path: '/compras',
+          name: 'compras',
+          component: ListaCompraPage,
         },
       ],
     },
