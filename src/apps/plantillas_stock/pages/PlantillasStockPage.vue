@@ -326,22 +326,22 @@ const confirmarEliminar = async () => {
                 {{ p.cantidad_objetivo }}
               </td>
               <td class="px-6 py-4">
-                <div class="flex justify-end gap-1">
+                <div class="flex justify-end gap-2">
                   <button
                     type="button"
                     @click="abrirEditar(p)"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-200)] transition-colors hover:bg-cyan-50 hover:text-cyan-600"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600"
                     title="Editar"
                   >
-                    <Pencil :size="16" />
+                    <Pencil :size="18" />
                   </button>
                   <button
                     type="button"
                     @click="abrirEliminar(p)"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-200)] transition-colors hover:bg-red-50 hover:text-red-600"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600"
                     title="Eliminar"
                   >
-                    <Trash2 :size="16" />
+                    <Trash2 :size="18" />
                   </button>
                 </div>
               </td>

@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  ChevronDown,
   ListChecks,
   Lock,
   Pencil,
@@ -40,6 +41,12 @@ const { success, error: notifyError } = useNotification()
 const LIMIT = 12
 
 const conteos = ref<ConteoStockSchema[]>([])
+const expandedConteos = ref<Set<number | string>>(new Set())
+const toggleConteo = (key: number | string) => {
+  if (expandedConteos.value.has(key)) expandedConteos.value.delete(key)
+  else expandedConteos.value.add(key)
+  expandedConteos.value = new Set(expandedConteos.value)
+}
 const total = ref(0)
 const offset = ref(0)
 const localFiltro = ref<number | null>(null)
@@ -483,128 +490,106 @@ const estadoClass = (estado?: string) => {
         />
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
-              <th
-                class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Local
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Fecha
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Estado
-              </th>
-              <th
-                class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]"
-              >
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-if="cargando"
-              v-for="n in 5"
-              :key="`sk-${n}`"
-              class="border-b border-[var(--bg-200)]"
-            >
-              <td class="px-6 py-4">
-                <div class="h-5 w-32 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="h-5 w-24 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="h-5 w-20 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="ml-auto h-8 w-32 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-            </tr>
+      <!-- Listado de conteos: tarjetas colapsables -->
+      <div class="divide-y divide-[var(--bg-200)]">
+        <template v-if="cargando">
+          <div v-for="n in 5" :key="`sk-${n}`" class="px-3 py-3 sm:px-4">
+            <div class="h-6 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
+          </div>
+        </template>
 
-            <tr v-else-if="conteos.length === 0">
-              <td colspan="4" class="px-6 py-16 text-center">
-                <ListChecks :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
-                <p class="font-semibold text-[var(--text-100)]">No hay conteos</p>
-                <p class="mt-1 text-sm text-[var(--text-200)]">
-                  Iniciá un nuevo conteo con el botón de arriba.
-                </p>
-              </td>
-            </tr>
+        <div v-else-if="conteos.length === 0" class="px-4 py-12 text-center">
+          <ListChecks :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
+          <p class="font-semibold text-[var(--text-100)]">No hay conteos</p>
+          <p class="mt-1 text-sm text-[var(--text-200)]">
+            Iniciá un nuevo conteo con el botón de arriba.
+          </p>
+        </div>
 
-            <tr
-              v-else
-              v-for="c in conteos"
-              :key="c.id ?? `${c.local}-${c.fecha}`"
-              class="border-b border-[var(--bg-200)] transition-colors hover:bg-[var(--bg-100)]/50"
-            >
-              <td class="px-6 py-4">
-                <span
-                  class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700"
-                  >{{ localNombre(c.local) }}</span
-                >
-              </td>
-              <td class="px-6 py-4 font-medium text-[var(--text-100)]">
+        <div
+          v-else
+          v-for="c in conteos"
+          :key="c.id ?? `${c.local}-${c.fecha}`"
+          class="transition-colors hover:bg-[var(--bg-100)]/40"
+        >
+          <!-- Encabezado siempre visible -->
+          <button
+            type="button"
+            class="flex w-full items-center justify-between gap-2 px-3 py-3 text-left sm:px-4"
+            @click="toggleConteo(c.id ?? `${c.local}-${c.fecha}`)"
+          >
+            <div class="flex min-w-0 flex-1 items-center gap-2">
+              <span
+                class="inline-flex shrink-0 items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+              >
+                {{ localNombre(c.local) }}
+              </span>
+              <span class="truncate text-sm font-medium text-[var(--text-100)]">
                 {{ formatFecha(c.fecha) }}
-              </td>
-              <td class="px-6 py-4">
-                <span
-                  class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
-                  :class="estadoClass(c.estado)"
-                  >{{ c.estado || 'abierto' }}</span
-                >
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex justify-end gap-1">
-                  <button
-                    type="button"
-                    @click="abrirWizard(c)"
-                    class="inline-flex items-center gap-1 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-teal-700"
-                    :title="c.estado === 'finalizado' ? 'Ver conteo' : 'Continuar conteo'"
-                  >
-                    <ListChecks :size="14" />
-                    {{ c.estado === 'finalizado' ? 'Ver' : 'Contar' }}
-                  </button>
-                  <button
-                    v-if="c.estado !== 'finalizado'"
-                    type="button"
-                    @click="abrirEditar(c)"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-200)] transition-colors hover:bg-teal-50 hover:text-teal-600"
-                    title="Editar fecha"
-                  >
-                    <Pencil :size="16" />
-                  </button>
-                  <button
-                    v-if="c.estado === 'finalizado'"
-                    type="button"
-                    @click="reabrirConteo(c)"
-                    :disabled="reabriendo"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-200)] transition-colors hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50"
-                    title="Reabrir conteo"
-                  >
-                    <RotateCcw :size="16" />
-                  </button>
-                  <button
-                    type="button"
-                    @click="abrirEliminar(c)"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-200)] transition-colors hover:bg-red-50 hover:text-red-600"
-                    title="Eliminar"
-                  >
-                    <Trash2 :size="16" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </span>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize"
+                :class="estadoClass(c.estado)"
+              >
+                {{ c.estado || 'abierto' }}
+              </span>
+              <ChevronDown
+                :size="18"
+                class="text-[var(--text-200)] transition-transform"
+                :class="{
+                  'rotate-180': expandedConteos.has(c.id ?? `${c.local}-${c.fecha}`),
+                }"
+              />
+            </div>
+          </button>
+
+          <!-- Cuerpo expandido: acciones -->
+          <div
+            v-if="expandedConteos.has(c.id ?? `${c.local}-${c.fecha}`)"
+            class="border-t border-[var(--bg-200)] bg-[var(--bg-100)]/30 px-3 py-3 sm:px-4"
+          >
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                @click.stop="abrirWizard(c)"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700"
+                :title="c.estado === 'finalizado' ? 'Ver conteo' : 'Continuar conteo'"
+              >
+                <ListChecks :size="16" />
+                {{ c.estado === 'finalizado' ? 'Ver' : 'Contar' }}
+              </button>
+              <button
+                v-if="c.estado !== 'finalizado'"
+                type="button"
+                @click.stop="abrirEditar(c)"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600"
+                title="Editar fecha"
+              >
+                <Pencil :size="18" />
+              </button>
+              <button
+                v-if="c.estado === 'finalizado'"
+                type="button"
+                @click.stop="reabrirConteo(c)"
+                :disabled="reabriendo"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50"
+                title="Reabrir conteo"
+              >
+                <RotateCcw :size="18" />
+              </button>
+              <button
+                type="button"
+                @click.stop="abrirEliminar(c)"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600"
+                title="Eliminar"
+              >
+                <Trash2 :size="18" />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div

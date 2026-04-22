@@ -100,13 +100,14 @@ const guardar = async () => {
   guardando.value = true
   try {
     if (modoEditar.value && productoSeleccionado.value?.id) {
+      const payload = {
+        nombre: nombreForm.value.trim(),
+        precio: precioNum,
+        unidad_medida: unidadMedidaForm.value,
+      } as unknown as Parameters<typeof productoApiActualizarProducto>[1]
       const res = await productoApiActualizarProducto(
         productoSeleccionado.value.id,
-        {
-          nombre: nombreForm.value.trim(),
-          precio: precioNum,
-          unidad_medida: unidadMedidaForm.value,
-        },
+        payload as never,
         authOptions(),
       )
       if (res.status >= 200 && res.status < 300) {
@@ -115,14 +116,12 @@ const guardar = async () => {
         await cargar()
       }
     } else {
-      const res = await productoApiCrearProducto(
-        {
-          nombre: nombreForm.value.trim(),
-          precio: precioNum,
-          unidad_medida: unidadMedidaForm.value,
-        },
-        authOptions(),
-      )
+      const payload = {
+        nombre: nombreForm.value.trim(),
+        precio: precioNum,
+        unidad_medida: unidadMedidaForm.value,
+      } as unknown as Parameters<typeof productoApiCrearProducto>[0]
+      const res = await productoApiCrearProducto(payload as never, authOptions())
       if (res.status >= 200 && res.status < 300) {
         success('Producto creado correctamente')
         showFormModal.value = false
@@ -293,22 +292,22 @@ const formatPrecio = (precio: string) => {
                 >
               </td>
               <td class="px-6 py-4">
-                <div class="flex justify-end gap-1">
+                <div class="flex justify-end gap-2">
                   <button
                     type="button"
                     @click="abrirEditar(p)"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-200)] transition-colors hover:bg-amber-50 hover:text-amber-600"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600"
                     title="Editar"
                   >
-                    <Pencil :size="16" />
+                    <Pencil :size="18" />
                   </button>
                   <button
                     type="button"
                     @click="abrirEliminar(p)"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-200)] transition-colors hover:bg-red-50 hover:text-red-600"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600"
                     title="Eliminar"
                   >
-                    <Trash2 :size="16" />
+                    <Trash2 :size="18" />
                   </button>
                 </div>
               </td>
