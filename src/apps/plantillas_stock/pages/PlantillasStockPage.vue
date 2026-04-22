@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { ClipboardList, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
+import {
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  MapPin,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-vue-next'
 import {
   plantillastockApiActualizarPlantilla,
   plantillastockApiCrearPlantilla,
@@ -35,6 +45,7 @@ const productos = ref<ProductoSchema[]>([])
 const showFormModal = ref(false)
 const modoEditar = ref(false)
 const seleccion = ref<PlantillaStockSchema | null>(null)
+const pasoCrear = ref(1)
 const productoBusquedaModal = ref('')
 const form = ref({
   local_id: null as number | null,
@@ -118,11 +129,7 @@ onMounted(() => {
 const localNombre = (id: number) => locales.value.find((l) => l.id === id)?.nombre ?? `#${id}`
 const productoNombre = (id: number) => productos.value.find((p) => p.id === id)?.nombre ?? `#${id}`
 
-const productosMap = computed(() => {
-  const m = new Map<number, ProductoSchema>()
-  productos.value.forEach((p) => p.id != null && m.set(p.id, p))
-  return m
-})
+const productoUnidad = (id: number) => productos.value.find((p) => p.id === id)?.unidad_medida ?? ''
 
 const productosFiltradosModal = computed(() => {
   const q = productoBusquedaModal.value.trim().toLowerCase()
@@ -135,9 +142,40 @@ const seleccionarProductoModal = (productoId: number | null | undefined) => {
   form.value.producto_id = productoId
 }
 
+const puedeSeguirPaso = computed(() => {
+  if (pasoCrear.value === 1) return form.value.local_id != null
+  if (pasoCrear.value === 2) return form.value.producto_id != null
+  return form.value.cantidad !== ''
+})
+
+const progresoCrear = computed(() => (pasoCrear.value / 3) * 100)
+
+const pasoTitulo = computed(() => {
+  if (pasoCrear.value === 1) return 'Paso 1 de 3 - Elegí el local'
+  if (pasoCrear.value === 2) return 'Paso 2 de 3 - Elegí el producto'
+  return 'Paso 3 de 3 - Definí la cantidad'
+})
+
+const irPasoSiguiente = () => {
+  if (!puedeSeguirPaso.value || pasoCrear.value >= 3) return
+  pasoCrear.value += 1
+}
+
+const irPasoAnterior = () => {
+  if (pasoCrear.value <= 1) return
+  pasoCrear.value -= 1
+}
+
+const cerrarFormModal = () => {
+  showFormModal.value = false
+  pasoCrear.value = 1
+  productoBusquedaModal.value = ''
+}
+
 const abrirCrear = () => {
   modoEditar.value = false
   seleccion.value = null
+  pasoCrear.value = 1
   productoBusquedaModal.value = ''
   form.value = { local_id: localFiltro.value, producto_id: null, cantidad: '' }
   showFormModal.value = true
@@ -146,6 +184,7 @@ const abrirCrear = () => {
 const abrirEditar = (p: PlantillaStockSchema) => {
   modoEditar.value = true
   seleccion.value = p
+  pasoCrear.value = 1
   productoBusquedaModal.value = ''
   form.value = {
     local_id: p.local_id,
@@ -399,96 +438,174 @@ const confirmarEliminar = async () => {
   <BaseModal
     :show="showFormModal"
     :title="modoEditar ? 'Editar plantilla' : 'Nueva plantilla'"
-    size="sm"
-    @close="showFormModal = false"
+    size="md"
+    @close="cerrarFormModal"
   >
     <form class="space-y-4" @submit.prevent="guardar">
-      <div>
-        <label class="mb-1 block text-sm font-medium text-[var(--text-100)]"
-          >Local <span class="text-red-500">*</span></label
-        >
-        <select
-          v-model="form.local_id"
-          :disabled="modoEditar"
-          class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 disabled:bg-[var(--bg-100)]"
-        >
-          <option :value="null" disabled>Seleccioná un local...</option>
-          <option v-for="l in locales" :key="l.id ?? l.nombre" :value="l.id">{{ l.nombre }}</option>
-        </select>
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-medium text-[var(--text-100)]"
-          >Producto <span class="text-red-500">*</span></label
-        >
-        <div class="relative mb-2" v-if="!modoEditar">
-          <Search
-            :size="16"
-            class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-200)]"
-          />
-          <input
-            v-model="productoBusquedaModal"
-            type="text"
-            placeholder="Buscar producto..."
-            class="w-full rounded-lg border border-[var(--bg-300)] bg-white py-2 pl-9 pr-3 text-sm text-[var(--text-100)] placeholder-[var(--text-200)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-          />
-        </div>
-        <div v-if="!modoEditar" class="rounded-lg border border-[var(--bg-300)] bg-white">
-          <div class="max-h-56 overflow-y-auto p-1.5">
-            <button
-              v-for="p in productosFiltradosModal"
-              :key="p.id ?? p.nombre"
-              type="button"
-              class="mb-1 flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left transition-colors last:mb-0"
-              :class="
-                form.producto_id === p.id
-                  ? 'bg-cyan-100 text-cyan-800'
-                  : 'hover:bg-[var(--bg-100)] text-[var(--text-100)]'
-              "
-              @click="seleccionarProductoModal(p.id)"
-            >
-              <span class="truncate text-sm font-medium">{{ p.nombre }}</span>
-              <span class="ml-2 shrink-0 text-xs text-[var(--text-200)]">{{
-                p.unidad_medida
-              }}</span>
-            </button>
-            <p
-              v-if="productosFiltradosModal.length === 0"
-              class="px-2 py-4 text-center text-xs text-[var(--text-200)]"
-            >
-              No hay productos que coincidan con la búsqueda.
-            </p>
+      <template v-if="!modoEditar">
+        <div class="rounded-xl border border-cyan-200 bg-cyan-50/60 p-3">
+          <div class="mb-2 flex items-center justify-between">
+            <p class="text-xs font-semibold text-cyan-700">{{ pasoTitulo }}</p>
+            <p class="text-xs font-semibold text-cyan-700">{{ pasoCrear }}/3</p>
+          </div>
+          <div class="h-2 overflow-hidden rounded-full bg-cyan-100">
+            <div
+              class="h-full bg-cyan-500 transition-all"
+              :style="{ width: `${progresoCrear}%` }"
+            ></div>
           </div>
         </div>
-        <div v-else>
+
+        <div v-if="pasoCrear === 1">
+          <label class="mb-2 block text-sm font-medium text-[var(--text-100)]">
+            ¿Para qué local querés definir productos?
+          </label>
+          <div
+            class="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-[var(--bg-300)] bg-white p-2"
+          >
+            <button
+              v-for="l in locales"
+              :key="l.id ?? l.nombre"
+              type="button"
+              class="flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors"
+              :class="
+                form.local_id === l.id
+                  ? 'border-cyan-300 bg-cyan-100 text-cyan-800'
+                  : 'border-[var(--bg-300)] hover:bg-[var(--bg-100)] text-[var(--text-100)]'
+              "
+              @click="form.local_id = l.id ?? null"
+            >
+              <MapPin :size="15" />
+              <span class="text-sm font-medium">{{ l.nombre }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="pasoCrear === 2">
+          <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">
+            Elegí el producto <span class="text-red-500">*</span>
+          </label>
+          <div class="relative mb-2">
+            <Search
+              :size="16"
+              class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-200)]"
+            />
+            <input
+              v-model="productoBusquedaModal"
+              type="text"
+              placeholder="Buscar producto..."
+              class="w-full rounded-lg border border-[var(--bg-300)] bg-white py-2 pl-9 pr-3 text-sm text-[var(--text-100)] placeholder-[var(--text-200)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+            />
+          </div>
+          <div class="rounded-lg border border-[var(--bg-300)] bg-white">
+            <div class="max-h-56 overflow-y-auto p-1.5">
+              <button
+                v-for="p in productosFiltradosModal"
+                :key="p.id ?? p.nombre"
+                type="button"
+                class="mb-1 flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left transition-colors last:mb-0"
+                :class="
+                  form.producto_id === p.id
+                    ? 'bg-cyan-100 text-cyan-800'
+                    : 'hover:bg-[var(--bg-100)] text-[var(--text-100)]'
+                "
+                @click="seleccionarProductoModal(p.id)"
+              >
+                <span class="flex items-center gap-2 truncate text-sm font-medium">
+                  <Package :size="14" class="shrink-0" />
+                  {{ p.nombre }}
+                </span>
+                <span class="ml-2 shrink-0 text-xs text-[var(--text-200)]">{{
+                  p.unidad_medida
+                }}</span>
+              </button>
+              <p
+                v-if="productosFiltradosModal.length === 0"
+                class="px-2 py-4 text-center text-xs text-[var(--text-200)]"
+              >
+                No hay productos que coincidan con la búsqueda.
+              </p>
+            </div>
+          </div>
+          <div class="mt-2 text-xs text-[var(--text-200)]">
+            {{ productosFiltradosModal.length }} resultado{{
+              productosFiltradosModal.length !== 1 ? 's' : ''
+            }}
+          </div>
+        </div>
+
+        <div v-if="pasoCrear === 3" class="space-y-3">
+          <div
+            class="rounded-lg border border-[var(--bg-300)] bg-[var(--bg-100)]/60 p-3 text-xs sm:text-sm"
+          >
+            <p class="font-semibold text-[var(--text-100)]">Resumen de plantilla</p>
+            <p class="mt-1 text-[var(--text-200)]">Local: {{ localNombre(form.local_id ?? 0) }}</p>
+            <p class="text-[var(--text-200)]">
+              Producto: {{ productoNombre(form.producto_id ?? 0) }}
+            </p>
+            <p class="text-[var(--text-200)]">
+              Unidad: {{ productoUnidad(form.producto_id ?? 0) || '-' }}
+            </p>
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-[var(--text-100)]"
+              >Cantidad objetivo <span class="text-red-500">*</span></label
+            >
+            <input
+              v-model="form.cantidad"
+              type="number"
+              step="0.01"
+              min="0"
+              class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+            />
+          </div>
+        </div>
+      </template>
+
+      <template v-else>
+        <div>
+          <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">Producto</label>
           <input
             :value="productoNombre(form.producto_id ?? 0)"
             disabled
             class="w-full rounded-lg border border-[var(--bg-300)] bg-[var(--bg-100)] px-3 py-2 text-sm text-[var(--text-100)]"
           />
         </div>
-        <div v-if="!modoEditar" class="mt-2 text-xs text-[var(--text-200)]">
-          {{ productosFiltradosModal.length }} resultado{{
-            productosFiltradosModal.length !== 1 ? 's' : ''
-          }}
+        <div>
+          <label class="mb-1 block text-sm font-medium text-[var(--text-100)]"
+            >Cantidad objetivo <span class="text-red-500">*</span></label
+          >
+          <input
+            v-model="form.cantidad"
+            type="number"
+            step="0.01"
+            min="0"
+            class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+          />
         </div>
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-medium text-[var(--text-100)]"
-          >Cantidad objetivo <span class="text-red-500">*</span></label
-        >
-        <input
-          v-model="form.cantidad"
-          type="number"
-          step="0.01"
-          min="0"
-          class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-        />
-      </div>
+      </template>
     </form>
     <template #footer>
-      <BaseButton variant="secondary" @click="showFormModal = false">Cancelar</BaseButton>
-      <BaseButton :loading="guardando" :disabled="!form.cantidad" @click="guardar">
-        {{ modoEditar ? 'Guardar cambios' : 'Crear plantilla' }}
+      <BaseButton variant="secondary" @click="cerrarFormModal">Cancelar</BaseButton>
+      <template v-if="!modoEditar">
+        <BaseButton variant="secondary" :disabled="pasoCrear === 1" @click="irPasoAnterior">
+          <span class="inline-flex items-center gap-1">
+            <ChevronLeft :size="16" />
+            Anterior
+          </span>
+        </BaseButton>
+        <BaseButton v-if="pasoCrear < 3" :disabled="!puedeSeguirPaso" @click="irPasoSiguiente">
+          <span class="inline-flex items-center gap-1">
+            Siguiente
+            <ChevronRight :size="16" />
+          </span>
+        </BaseButton>
+        <BaseButton v-else :loading="guardando" :disabled="!puedeSeguirPaso" @click="guardar">
+          Crear plantilla
+        </BaseButton>
+      </template>
+      <BaseButton v-else :loading="guardando" :disabled="!form.cantidad" @click="guardar">
+        Guardar cambios
       </BaseButton>
     </template>
   </BaseModal>
