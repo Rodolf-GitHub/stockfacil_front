@@ -36,9 +36,9 @@ export default defineConfig(({ mode }) => {
         ],
         manifest: {
           id: '/',
-          name: 'Verduleria',
-          short_name: 'Verduleria',
-          description: 'Pedidos Verduleria',
+          name: 'StockFacil',
+          short_name: 'StockFacil',
+          description: 'Gestion de stock con StockFacil',
           start_url: '/?source=pwa',
           scope: '/',
           display: 'standalone',
