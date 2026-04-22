@@ -678,7 +678,7 @@ const estadoClass = (estado?: string) => {
           class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
         >
           <option :value="null" disabled>Seleccioná un local...</option>
-          <option v-for="l in locales" :key="l.id" :value="l.id">{{ l.nombre }}</option>
+          <option v-for="l in locales" :key="l.id ?? l.nombre" :value="l.id">{{ l.nombre }}</option>
         </select>
       </div>
       <div>

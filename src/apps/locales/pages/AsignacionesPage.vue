@@ -91,8 +91,10 @@ const usuariosFiltrados = computed(() => {
 
 const localesNoAsignados = computed(() => {
   if (!usuarioAsignar.value) return [] as LocalSchema[]
-  const ids = new Set(usuarioAsignar.value.locales.map((l) => l.id))
-  return localesDisponibles.value.filter((l) => l.id !== undefined && !ids.has(l.id))
+  const ids = new Set(
+    usuarioAsignar.value.locales.map((l) => l.id).filter((id): id is number => id != null),
+  )
+  return localesDisponibles.value.filter((l) => l.id != null && !ids.has(l.id))
 })
 
 const abrirAsignar = (u: UsuarioConLocalesSchema) => {
@@ -308,7 +310,9 @@ const desasignar = async () => {
           class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
         >
           <option :value="null" disabled>Seleccioná un local...</option>
-          <option v-for="l in localesNoAsignados" :key="l.id" :value="l.id">{{ l.nombre }}</option>
+          <option v-for="l in localesNoAsignados" :key="l.id ?? l.nombre" :value="l.id">
+            {{ l.nombre }}
+          </option>
         </select>
         <p v-if="localesNoAsignados.length === 0" class="mt-2 text-xs text-[var(--text-200)]">
           Este usuario ya tiene todos los locales asignados.
