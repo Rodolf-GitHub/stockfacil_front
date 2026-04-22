@@ -147,7 +147,11 @@ const abrirEditar = (p: PlantillaStockSchema) => {
   modoEditar.value = true
   seleccion.value = p
   productoBusquedaModal.value = ''
-  form.value = { local_id: p.local, producto_id: p.producto, cantidad: p.cantidad_objetivo }
+  form.value = {
+    local_id: p.local_id,
+    producto_id: p.producto_id,
+    cantidad: String(p.cantidad_objetivo),
+  }
   showFormModal.value = true
 }
 
@@ -279,6 +283,11 @@ const confirmarEliminar = async () => {
               Producto
             </th>
             <th
+              class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Unidad
+            </th>
+            <th
               class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
             >
               Objetivo
@@ -306,7 +315,7 @@ const confirmarEliminar = async () => {
           </template>
 
           <tr v-else-if="plantillas.length === 0">
-            <td colspan="3" class="px-4 py-12 text-center">
+            <td colspan="4" class="px-4 py-12 text-center">
               <ClipboardList :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
               <p class="font-semibold text-[var(--text-100)]">No hay plantillas</p>
               <p class="mt-1 text-sm text-[var(--text-200)]">
@@ -324,7 +333,12 @@ const confirmarEliminar = async () => {
             <td
               class="w-full max-w-0 px-3 py-2.5 text-sm font-medium text-[var(--text-100)] sm:px-4 sm:py-3"
             >
-              <span class="block truncate">{{ productoNombre(p.producto) }}</span>
+              <span class="block truncate">{{ p.producto_nombre }}</span>
+            </td>
+            <td
+              class="whitespace-nowrap px-2 py-2.5 text-left text-sm text-[var(--text-200)] sm:px-4 sm:py-3"
+            >
+              {{ p.producto_unidad_medida || '-' }}
             </td>
             <td
               class="whitespace-nowrap px-2 py-2.5 text-right text-sm font-semibold text-[var(--text-100)] sm:px-4 sm:py-3"
@@ -487,8 +501,8 @@ const confirmarEliminar = async () => {
   >
     <p class="text-sm text-[var(--text-100)]">
       ¿Eliminar la plantilla de
-      <span class="font-semibold">{{ aEliminar ? productoNombre(aEliminar.producto) : '' }}</span>
-      en <span class="font-semibold">{{ aEliminar ? localNombre(aEliminar.local) : '' }}</span
+      <span class="font-semibold">{{ aEliminar ? aEliminar.producto_nombre : '' }}</span>
+      en <span class="font-semibold">{{ aEliminar ? localNombre(aEliminar.local_id) : '' }}</span
       >?
     </p>
     <template #footer>
