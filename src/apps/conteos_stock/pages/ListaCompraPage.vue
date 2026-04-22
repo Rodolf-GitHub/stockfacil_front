@@ -45,6 +45,7 @@ const cargarLocales = async () => {
 onMounted(async () => {
   fecha.value = new Date().toISOString().slice(0, 10)
   await cargarLocales()
+  await consultar()
 })
 
 const consultar = async () => {

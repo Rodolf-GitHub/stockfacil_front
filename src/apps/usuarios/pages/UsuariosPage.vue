@@ -187,77 +187,106 @@ const confirmarEliminar = async () => {
         </div>
       </div>
 
-      <!-- Lista de usuarios: tarjetas compactas -->
-      <div class="divide-y divide-[var(--bg-200)]">
-        <template v-if="cargando">
-          <div v-for="n in 5" :key="`sk-${n}`" class="px-3 py-3 sm:px-4">
-            <div class="h-6 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
-          </div>
-        </template>
-
-        <div v-else-if="usuarios.length === 0" class="px-4 py-12 text-center">
-          <Users :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
-          <p class="font-semibold text-[var(--text-100)]">No hay usuarios</p>
-          <p class="mt-1 text-sm text-[var(--text-200)]">
-            {{
-              busqueda
-                ? 'Ningún usuario coincide con la búsqueda.'
-                : 'Creá el primer usuario con el botón de arriba.'
-            }}
-          </p>
-        </div>
-
-        <div
-          v-else
-          v-for="u in usuarios"
-          :key="u.id ?? u.email"
-          class="flex items-center justify-between gap-2 px-3 py-2.5 transition-colors hover:bg-[var(--bg-100)]/40 sm:px-4 sm:py-3"
-        >
-          <div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            <div
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 sm:h-10 sm:w-10"
+      <!-- Tabla de usuarios -->
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
+            <th
+              class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
             >
-              <User :size="16" class="text-violet-600" />
-            </div>
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-[var(--text-100)]">{{ u.email }}</p>
-              <p class="mt-0.5">
-                <span
-                  v-if="u.es_admin"
-                  class="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700"
-                >
-                  <ShieldCheck :size="10" />
-                  Administrador
-                </span>
-                <span
-                  v-else
-                  class="inline-flex items-center rounded-full bg-[var(--bg-200)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-200)]"
-                >
-                  Usuario
-                </span>
+              Email
+            </th>
+            <th
+              class="whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Rol
+            </th>
+            <th
+              class="whitespace-nowrap px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-if="cargando">
+            <tr v-for="n in 5" :key="`sk-${n}`" class="border-b border-[var(--bg-200)]">
+              <td class="px-3 py-3 sm:px-4">
+                <div class="h-5 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+              <td class="px-2 py-3 sm:px-4">
+                <div class="h-5 w-20 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+              <td class="px-3 py-3 sm:px-4">
+                <div class="ml-auto h-8 w-20 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+            </tr>
+          </template>
+
+          <tr v-else-if="usuarios.length === 0">
+            <td colspan="3" class="px-4 py-12 text-center">
+              <Users :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
+              <p class="font-semibold text-[var(--text-100)]">No hay usuarios</p>
+              <p class="mt-1 text-sm text-[var(--text-200)]">
+                {{
+                  busqueda
+                    ? 'Ningún usuario coincide con la búsqueda.'
+                    : 'Creá el primer usuario con el botón de arriba.'
+                }}
               </p>
-            </div>
-          </div>
-          <div class="flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              @click="abrirReset(u)"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500 text-white shadow-sm transition-colors hover:bg-violet-600 sm:h-10 sm:w-10"
-              title="Restablecer contraseña"
+            </td>
+          </tr>
+
+          <tr
+            v-else
+            v-for="u in usuarios"
+            :key="u.id ?? u.email"
+            class="border-b border-[var(--bg-200)] last:border-0 transition-colors hover:bg-[var(--bg-100)]/40"
+          >
+            <td
+              class="w-full max-w-0 px-3 py-2.5 text-sm font-medium text-[var(--text-100)] sm:px-4 sm:py-3"
             >
-              <KeyRound :size="16" />
-            </button>
-            <button
-              type="button"
-              @click="abrirEliminar(u)"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
-              title="Eliminar"
-            >
-              <Trash2 :size="16" />
-            </button>
-          </div>
-        </div>
-      </div>
+              <span class="block truncate">{{ u.email }}</span>
+            </td>
+            <td class="whitespace-nowrap px-2 py-2.5 sm:px-4 sm:py-3">
+              <span
+                v-if="u.es_admin"
+                class="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700"
+              >
+                <ShieldCheck :size="10" />
+                <span class="hidden sm:inline">Administrador</span>
+                <span class="sm:hidden">Admin</span>
+              </span>
+              <span
+                v-else
+                class="inline-flex items-center rounded-full bg-[var(--bg-200)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-200)]"
+              >
+                Usuario
+              </span>
+            </td>
+            <td class="whitespace-nowrap px-3 py-2.5 sm:px-4 sm:py-3">
+              <div class="flex justify-end gap-1.5">
+                <button
+                  type="button"
+                  @click="abrirReset(u)"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500 text-white shadow-sm transition-colors hover:bg-violet-600 sm:h-10 sm:w-10"
+                  title="Restablecer contraseña"
+                >
+                  <KeyRound :size="16" />
+                </button>
+                <button
+                  type="button"
+                  @click="abrirEliminar(u)"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
+                  title="Eliminar"
+                >
+                  <Trash2 :size="16" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <div
         v-if="!cargando && usuarios.length > 0"

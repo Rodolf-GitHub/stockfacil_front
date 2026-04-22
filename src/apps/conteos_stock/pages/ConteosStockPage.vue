@@ -113,13 +113,7 @@ const cargarLocales = async () => {
       ...authOptions(),
       fetch: fetchWithBaseUrl,
     } as RequestInit)
-    if (res.status >= 200 && res.status < 300) {
-      locales.value = res.data.items
-      // Preseleccionar primer local si todavía no hay seleccionado
-      if (localFiltro.value == null && locales.value.length > 0 && locales.value[0].id != null) {
-        localFiltro.value = locales.value[0].id
-      }
-    }
+    if (res.status >= 200 && res.status < 300) locales.value = res.data.items
   } catch {
     /* */
   }
@@ -144,6 +138,7 @@ watch([localFiltro, fechaFiltro], () => {
 watch(offset, cargar)
 
 onMounted(() => {
+  cargar()
   cargarLocales()
   cargarProductos()
 })
@@ -478,6 +473,7 @@ const estadoClass = (estado?: string) => {
           v-model="localFiltro"
           class="rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
         >
+          <option :value="null">Todos los locales</option>
           <option v-for="l in locales" :key="l.id ?? l.nombre" :value="l.id">
             {{ l.nombre }}
           </option>
@@ -489,83 +485,129 @@ const estadoClass = (estado?: string) => {
         />
       </div>
 
-      <!-- Listado de conteos: tarjetas compactas con acciones siempre visibles -->
-      <div class="divide-y divide-[var(--bg-200)]">
-        <template v-if="cargando">
-          <div v-for="n in 5" :key="`sk-${n}`" class="px-3 py-3 sm:px-4">
-            <div class="h-6 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
-          </div>
-        </template>
+      <!-- Tabla de conteos -->
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
+            <th
+              class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Local
+            </th>
+            <th
+              class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Fecha
+            </th>
+            <th
+              class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Estado
+            </th>
+            <th
+              class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-if="cargando">
+            <tr v-for="n in 5" :key="`sk-${n}`" class="border-b border-[var(--bg-200)]">
+              <td class="px-3 py-3 sm:px-4">
+                <div class="h-5 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+              <td class="px-2 py-3 sm:px-4">
+                <div class="h-5 w-20 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+              <td class="px-2 py-3 sm:px-4">
+                <div class="h-5 w-16 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+              <td class="px-3 py-3 sm:px-4">
+                <div class="ml-auto h-8 w-24 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+            </tr>
+          </template>
 
-        <div v-else-if="conteos.length === 0" class="px-4 py-12 text-center">
-          <ListChecks :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
-          <p class="font-semibold text-[var(--text-100)]">No hay conteos</p>
-          <p class="mt-1 text-sm text-[var(--text-200)]">
-            Iniciá un nuevo conteo con el botón de arriba.
-          </p>
-        </div>
+          <tr v-else-if="conteos.length === 0">
+            <td colspan="4" class="px-4 py-12 text-center">
+              <ListChecks :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
+              <p class="font-semibold text-[var(--text-100)]">No hay conteos</p>
+              <p class="mt-1 text-sm text-[var(--text-200)]">
+                Iniciá un nuevo conteo con el botón de arriba.
+              </p>
+            </td>
+          </tr>
 
-        <div
-          v-else
-          v-for="c in conteos"
-          :key="c.id ?? `${c.local}-${c.fecha}`"
-          class="flex items-center justify-between gap-2 px-3 py-2.5 transition-colors hover:bg-[var(--bg-100)]/40 sm:px-4 sm:py-3"
-        >
-          <div class="flex min-w-0 flex-1 flex-col gap-1">
-            <div class="flex min-w-0 items-center gap-2">
-              <span class="truncate text-sm font-semibold text-[var(--text-100)]">
-                {{ formatFecha(c.fecha) }}
-              </span>
+          <tr
+            v-else
+            v-for="c in conteos"
+            :key="c.id ?? `${c.local}-${c.fecha}`"
+            class="border-b border-[var(--bg-200)] last:border-0 transition-colors hover:bg-[var(--bg-100)]/40"
+          >
+            <td
+              class="w-full max-w-0 px-3 py-2.5 text-sm font-semibold text-[var(--text-100)] sm:px-4 sm:py-3"
+            >
+              <span class="block truncate">{{ localNombre(c.local) }}</span>
+            </td>
+            <td
+              class="whitespace-nowrap px-2 py-2.5 text-xs text-[var(--text-200)] sm:px-4 sm:py-3 sm:text-sm"
+            >
+              {{ formatFecha(c.fecha) }}
+            </td>
+            <td class="whitespace-nowrap px-2 py-2.5 sm:px-4 sm:py-3">
               <span
-                class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
+                class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
                 :class="estadoClass(c.estado)"
               >
                 {{ c.estado || 'abierto' }}
               </span>
-            </div>
-          </div>
-          <div class="flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              @click="abrirWizard(c)"
-              class="inline-flex h-9 items-center gap-1 rounded-lg bg-teal-600 px-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 sm:h-10 sm:gap-1.5 sm:px-3 sm:text-sm"
-              :title="c.estado === 'finalizado' ? 'Ver conteo' : 'Continuar conteo'"
-            >
-              <ListChecks :size="16" />
-              <span class="hidden sm:inline">{{
-                c.estado === 'finalizado' ? 'Ver' : 'Contar'
-              }}</span>
-            </button>
-            <button
-              v-if="c.estado !== 'finalizado'"
-              type="button"
-              @click="abrirEditar(c)"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
-              title="Editar fecha"
-            >
-              <Pencil :size="16" />
-            </button>
-            <button
-              v-if="c.estado === 'finalizado'"
-              type="button"
-              @click="reabrirConteo(c)"
-              :disabled="reabriendo"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50 sm:h-10 sm:w-10"
-              title="Reabrir conteo"
-            >
-              <RotateCcw :size="16" />
-            </button>
-            <button
-              type="button"
-              @click="abrirEliminar(c)"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
-              title="Eliminar"
-            >
-              <Trash2 :size="16" />
-            </button>
-          </div>
-        </div>
-      </div>
+            </td>
+            <td class="whitespace-nowrap px-3 py-2.5 sm:px-4 sm:py-3">
+              <div class="flex justify-end gap-1.5">
+                <button
+                  type="button"
+                  @click="abrirWizard(c)"
+                  class="inline-flex h-9 items-center gap-1 rounded-lg bg-teal-600 px-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 sm:h-10 sm:gap-1.5 sm:px-3 sm:text-sm"
+                  :title="c.estado === 'finalizado' ? 'Ver conteo' : 'Continuar conteo'"
+                >
+                  <ListChecks :size="16" />
+                  <span class="hidden sm:inline">{{
+                    c.estado === 'finalizado' ? 'Ver' : 'Contar'
+                  }}</span>
+                </button>
+                <button
+                  v-if="c.estado !== 'finalizado'"
+                  type="button"
+                  @click="abrirEditar(c)"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
+                  title="Editar fecha"
+                >
+                  <Pencil :size="16" />
+                </button>
+                <button
+                  v-if="c.estado === 'finalizado'"
+                  type="button"
+                  @click="reabrirConteo(c)"
+                  :disabled="reabriendo"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50 sm:h-10 sm:w-10"
+                  title="Reabrir conteo"
+                >
+                  <RotateCcw :size="16" />
+                </button>
+                <button
+                  type="button"
+                  @click="abrirEliminar(c)"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
+                  title="Eliminar"
+                >
+                  <Trash2 :size="16" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <div
         v-if="!cargando && conteos.length > 0"

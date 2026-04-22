@@ -202,72 +202,110 @@ const formatPrecio = (precio: string) => {
         </div>
       </div>
 
-      <!-- Lista de productos: tarjetas compactas (mobile-first) -->
-      <div class="divide-y divide-[var(--bg-200)]">
-        <template v-if="cargando">
-          <div v-for="n in 5" :key="`sk-${n}`" class="px-3 py-3 sm:px-4">
-            <div class="h-6 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
-          </div>
-        </template>
-
-        <div v-else-if="productos.length === 0" class="px-4 py-12 text-center">
-          <Package :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
-          <p class="font-semibold text-[var(--text-100)]">No hay productos</p>
-          <p class="mt-1 text-sm text-[var(--text-200)]">
-            {{
-              busqueda
-                ? 'Ningún producto coincide con la búsqueda.'
-                : 'Aún no hay productos en el catálogo.'
-            }}
-          </p>
-        </div>
-
-        <div
-          v-else
-          v-for="p in productos"
-          :key="p.id ?? p.nombre"
-          class="flex items-center justify-between gap-2 px-3 py-2.5 transition-colors hover:bg-[var(--bg-100)]/40 sm:px-4 sm:py-3"
-        >
-          <div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            <div
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 sm:h-10 sm:w-10"
+      <!-- Tabla de productos -->
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
+            <th
+              class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
             >
-              <Package :size="16" class="text-amber-600" />
-            </div>
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-[var(--text-100)]">{{ p.nombre }}</p>
-              <p class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                <span
-                  class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700"
-                >
-                  {{ p.unidad_medida || 'unidades' }}
-                </span>
-                <span class="font-semibold text-[var(--text-100)]">
-                  $ {{ formatPrecio(p.precio) }}
-                </span>
+              Producto
+            </th>
+            <th
+              class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Unidad
+            </th>
+            <th
+              class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Precio
+            </th>
+            <th
+              class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-if="cargando">
+            <tr v-for="n in 5" :key="`sk-${n}`" class="border-b border-[var(--bg-200)]">
+              <td class="px-3 py-3 sm:px-4">
+                <div class="h-5 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+              <td class="px-2 py-3 sm:px-4">
+                <div class="h-5 w-16 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+              <td class="px-2 py-3 sm:px-4">
+                <div class="ml-auto h-5 w-16 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+              <td class="px-3 py-3 sm:px-4">
+                <div class="ml-auto h-8 w-20 animate-pulse rounded bg-[var(--bg-200)]"></div>
+              </td>
+            </tr>
+          </template>
+
+          <tr v-else-if="productos.length === 0">
+            <td colspan="4" class="px-4 py-12 text-center">
+              <Package :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
+              <p class="font-semibold text-[var(--text-100)]">No hay productos</p>
+              <p class="mt-1 text-sm text-[var(--text-200)]">
+                {{
+                  busqueda
+                    ? 'Ningún producto coincide con la búsqueda.'
+                    : 'Aún no hay productos en el catálogo.'
+                }}
               </p>
-            </div>
-          </div>
-          <div class="flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              @click="abrirEditar(p)"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
-              title="Editar"
+            </td>
+          </tr>
+
+          <tr
+            v-else
+            v-for="p in productos"
+            :key="p.id ?? p.nombre"
+            class="border-b border-[var(--bg-200)] last:border-0 transition-colors hover:bg-[var(--bg-100)]/40"
+          >
+            <td
+              class="w-full max-w-0 px-3 py-2.5 text-sm font-medium text-[var(--text-100)] sm:px-4 sm:py-3"
             >
-              <Pencil :size="16" />
-            </button>
-            <button
-              type="button"
-              @click="abrirEliminar(p)"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
-              title="Eliminar"
+              <span class="block truncate">{{ p.nombre }}</span>
+            </td>
+            <td class="whitespace-nowrap px-2 py-2.5 sm:px-4 sm:py-3">
+              <span
+                class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700"
+              >
+                {{ p.unidad_medida || 'unidades' }}
+              </span>
+            </td>
+            <td
+              class="whitespace-nowrap px-2 py-2.5 text-right text-sm font-semibold text-[var(--text-100)] sm:px-4 sm:py-3"
             >
-              <Trash2 :size="16" />
-            </button>
-          </div>
-        </div>
-      </div>
+              $ {{ formatPrecio(p.precio) }}
+            </td>
+            <td class="whitespace-nowrap px-3 py-2.5 sm:px-4 sm:py-3">
+              <div class="flex justify-end gap-1.5">
+                <button
+                  type="button"
+                  @click="abrirEditar(p)"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
+                  title="Editar"
+                >
+                  <Pencil :size="16" />
+                </button>
+                <button
+                  type="button"
+                  @click="abrirEliminar(p)"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
+                  title="Eliminar"
+                >
+                  <Trash2 :size="16" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <div
         v-if="!cargando && productos.length > 0"

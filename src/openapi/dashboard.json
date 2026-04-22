@@ -1,0 +1,148 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NinjaAPI",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "paths": {
+    "/api/dashboard/estadisticas": {
+      "get": {
+        "operationId": "dashboard_api_obtener_estadisticas",
+        "summary": "Obtener Estadisticas",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Dashboard"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DashboardSchema": {
+        "properties": {
+          "cuenta_nombre": {
+            "title": "Cuenta Nombre",
+            "type": "string"
+          },
+          "total_productos": {
+            "title": "Total Productos",
+            "type": "integer"
+          },
+          "total_locales_accesibles": {
+            "title": "Total Locales Accesibles",
+            "type": "integer"
+          },
+          "total_conteos_borrador": {
+            "title": "Total Conteos Borrador",
+            "type": "integer"
+          },
+          "total_conteos_finalizados": {
+            "title": "Total Conteos Finalizados",
+            "type": "integer"
+          },
+          "productos_a_comprar_hoy": {
+            "title": "Productos A Comprar Hoy",
+            "type": "integer"
+          },
+          "locales": {
+            "items": {
+              "$ref": "#/components/schemas/LocalEstadisticasSchema"
+            },
+            "title": "Locales",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cuenta_nombre",
+          "total_productos",
+          "total_locales_accesibles",
+          "total_conteos_borrador",
+          "total_conteos_finalizados",
+          "productos_a_comprar_hoy",
+          "locales"
+        ],
+        "title": "DashboardSchema",
+        "type": "object"
+      },
+      "LocalEstadisticasSchema": {
+        "properties": {
+          "local_id": {
+            "title": "Local Id",
+            "type": "integer"
+          },
+          "local_nombre": {
+            "title": "Local Nombre",
+            "type": "string"
+          },
+          "productos_en_plantilla": {
+            "title": "Productos En Plantilla",
+            "type": "integer"
+          },
+          "ultimo_conteo_fecha": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultimo Conteo Fecha"
+          },
+          "ultimo_conteo_estado": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultimo Conteo Estado"
+          },
+          "total_conteos": {
+            "title": "Total Conteos",
+            "type": "integer"
+          },
+          "productos_a_comprar_hoy": {
+            "title": "Productos A Comprar Hoy",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "local_id",
+          "local_nombre",
+          "productos_en_plantilla",
+          "total_conteos",
+          "productos_a_comprar_hoy"
+        ],
+        "title": "LocalEstadisticasSchema",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "AuthBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "servers": []
+}
