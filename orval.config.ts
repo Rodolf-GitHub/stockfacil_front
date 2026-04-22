@@ -33,4 +33,20 @@ export default defineConfig({
       client: 'fetch',
     },
   },
+  plantillasStock: {
+    input: './src/openapi/plantillas-stock.json',
+    output: {
+      target: './src/apps/plantillas_stock/api/index.ts',
+      schemas: './src/apps/plantillas_stock/api/schemas',
+      client: 'fetch',
+    },
+  },
+  conteosStock: {
+    input: './src/openapi/conteos-stock.json',
+    output: {
+      target: './src/apps/conteos_stock/api/index.ts',
+      schemas: './src/apps/conteos_stock/api/schemas',
+      client: 'fetch',
+    },
+  },
 })
