@@ -907,46 +907,69 @@ const estadoClass = (estado?: string) => {
     </div>
 
     <template #footer>
-      <BaseButton variant="secondary" @click="cerrarWizard">
-        {{ esSoloLectura ? 'Cerrar' : 'Guardar y cerrar' }}
-      </BaseButton>
-
-      <template v-if="totalSteps > 0 && !esSoloLectura">
-        <BaseButton variant="secondary" :disabled="stepIdx === 0" @click="irAnterior">
-          <ArrowLeft :size="16" />
-          Anterior
+      <div
+        class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3"
+      >
+        <BaseButton variant="secondary" class="w-full sm:w-auto" @click="cerrarWizard">
+          {{ esSoloLectura ? 'Cerrar' : 'Guardar y cerrar' }}
         </BaseButton>
 
-        <BaseButton
-          v-if="stepIdx < totalSteps - 1"
-          :loading="guardandoPaso"
-          :disabled="cantidadVacia"
-          @click="irSiguiente"
+        <template v-if="totalSteps > 0 && !esSoloLectura">
+          <div class="grid grid-cols-2 gap-2 sm:contents">
+            <BaseButton
+              variant="secondary"
+              class="w-full sm:w-auto"
+              :disabled="stepIdx === 0"
+              @click="irAnterior"
+            >
+              <ArrowLeft :size="16" />
+              Anterior
+            </BaseButton>
+
+            <BaseButton
+              v-if="stepIdx < totalSteps - 1"
+              class="w-full sm:w-auto"
+              :loading="guardandoPaso"
+              :disabled="cantidadVacia"
+              @click="irSiguiente"
+            >
+              Siguiente
+              <ArrowRight :size="16" />
+            </BaseButton>
+          </div>
+
+          <BaseButton
+            v-if="todosContados || stepIdx === totalSteps - 1"
+            variant="success"
+            class="w-full sm:w-auto"
+            :loading="finalizando || guardandoPaso"
+            @click="finalizarConteo"
+          >
+            <CheckCircle2 :size="16" />
+            Finalizar conteo
+          </BaseButton>
+        </template>
+
+        <span
+          v-else-if="esSoloLectura && conteoDetalle"
+          class="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center"
         >
-          Siguiente
-          <ArrowRight :size="16" />
-        </BaseButton>
-
-        <BaseButton
-          v-if="todosContados || stepIdx === totalSteps - 1"
-          variant="success"
-          :loading="finalizando || guardandoPaso"
-          @click="finalizarConteo"
-        >
-          <CheckCircle2 :size="16" />
-          Finalizar conteo
-        </BaseButton>
-      </template>
-
-      <span v-else-if="esSoloLectura && conteoDetalle" class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-1 text-sm text-[var(--text-200)]">
-          <Lock :size="14" /> Conteo finalizado
+          <span
+            class="inline-flex items-center justify-center gap-1 text-sm text-[var(--text-200)]"
+          >
+            <Lock :size="14" /> Conteo finalizado
+          </span>
+          <BaseButton
+            variant="secondary"
+            class="w-full sm:w-auto"
+            :loading="reabriendo"
+            @click="reabrirConteo(conteoDetalle)"
+          >
+            <RotateCcw :size="16" />
+            Reabrir
+          </BaseButton>
         </span>
-        <BaseButton variant="secondary" :loading="reabriendo" @click="reabrirConteo(conteoDetalle)">
-          <RotateCcw :size="16" />
-          Reabrir
-        </BaseButton>
-      </span>
+      </div>
     </template>
   </BaseModal>
 </template>
