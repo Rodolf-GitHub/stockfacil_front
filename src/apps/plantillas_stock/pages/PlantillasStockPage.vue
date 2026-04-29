@@ -30,6 +30,8 @@ import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
 
 const { success, error: notifyError } = useNotification()
 
+const esAdmin = localStorage.getItem('es_admin') === 'true'
+
 const LIMIT = 100
 
 const plantillas = ref<PlantillaStockSchema[]>([])
@@ -334,6 +336,7 @@ const confirmarEliminar = async () => {
         </div>
       </div>
       <button
+        v-if="esAdmin"
         type="button"
         @click="abrirCrear"
         class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-cyan-600 shadow-sm transition-all hover:bg-white/90"
@@ -448,7 +451,7 @@ const confirmarEliminar = async () => {
               {{ unidadLegible(p.producto_unidad_medida, p.cantidad_objetivo) }}
             </span>
           </span>
-          <div class="flex shrink-0 gap-1.5">
+          <div v-if="esAdmin" class="flex shrink-0 gap-1.5">
             <button
               type="button"
               @click="abrirEditar(p)"
