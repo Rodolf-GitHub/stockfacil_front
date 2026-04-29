@@ -37,7 +37,7 @@ import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
 
 const { success, error: notifyError } = useNotification()
 
-const LIMIT = 12
+const LIMIT = 100
 
 const conteos = ref<ConteoStockSchema[]>([])
 const total = ref(0)
@@ -146,6 +146,22 @@ onMounted(() => {
 const localNombre = (id: number) => locales.value.find((l) => l.id === id)?.nombre ?? `#${id}`
 const productoNombre = (id: number) => productos.value.find((p) => p.id === id)?.nombre ?? `#${id}`
 const productoUnidad = (id: number) => productos.value.find((p) => p.id === id)?.unidad_medida ?? ''
+
+const unidadPlural = (unidad: string | null | undefined) => {
+  const u = (unidad || '').trim().toLowerCase()
+  if (!u || u === 'otros') return ''
+  const map: Record<string, string> = {
+    kg: 'kilogramos',
+    unidades: 'unidades',
+    litros: 'litros',
+    atados: 'atados',
+    cajas: 'cajas',
+    sacos: 'sacos',
+    bandejas: 'bandejas',
+    planchas: 'planchas',
+  }
+  return map[u] ?? u
+}
 
 const abrirCrear = () => {
   crearForm.value = {
@@ -807,22 +823,31 @@ const estadoClass = (estado?: string) => {
           class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-4 sm:p-6"
         >
           <p class="text-[10px] font-semibold uppercase tracking-wider text-teal-600 sm:text-xs">
-            Producto a contar
+            Pregunta
           </p>
-          <h3 class="mt-1 text-xl font-bold text-[var(--text-100)] sm:text-2xl">
-            {{ stepActual.producto_nombre || productoNombre(stepActual.producto_id) }}
-          </h3>
-          <p class="mt-1 text-xs text-[var(--text-200)] sm:text-sm">
-            Objetivo:
-            <span class="font-semibold text-[var(--text-100)]">
-              {{ stepActual.cantidad_objetivo }}
-              {{ stepActual.producto_unidad_medida || productoUnidad(stepActual.producto_id) }}
+          <h3 class="mt-1 text-lg font-bold leading-snug text-[var(--text-100)] sm:text-2xl">
+            ¿Cuántos
+            <span class="text-teal-700">
+              {{
+                unidadPlural(
+                  stepActual.producto_unidad_medida || productoUnidad(stepActual.producto_id),
+                ) || 'unidades'
+              }}
             </span>
-          </p>
+            de
+            <span class="text-teal-700">
+              {{
+                (stepActual.producto_nombre || productoNombre(stepActual.producto_id)).toLowerCase()
+              }}
+            </span>
+            tienes actualmente en el local
+            <span class="text-teal-700">{{ localNombre(conteoDetalle.local) }}</span
+            >?
+          </h3>
 
           <div class="mt-4 sm:mt-5">
             <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">
-              Cantidad contada <span v-if="!esSoloLectura" class="text-red-500">*</span>
+              Tu respuesta <span v-if="!esSoloLectura" class="text-red-500">*</span>
             </label>
             <div class="flex items-stretch gap-2">
               <input
@@ -839,7 +864,12 @@ const estadoClass = (estado?: string) => {
                 class="inline-flex shrink-0 max-w-[40%] items-center justify-center truncate rounded-lg bg-[var(--bg-100)] px-2.5 text-xs font-medium text-[var(--text-200)] sm:max-w-none sm:px-4 sm:text-sm"
               >
                 {{
-                  stepActual.producto_unidad_medida || productoUnidad(stepActual.producto_id) || '—'
+                  unidadPlural(
+                    stepActual.producto_unidad_medida || productoUnidad(stepActual.producto_id),
+                  ) ||
+                  stepActual.producto_unidad_medida ||
+                  productoUnidad(stepActual.producto_id) ||
+                  '—'
                 }}
               </span>
             </div>

@@ -30,7 +30,7 @@ import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
 
 const { success, error: notifyError } = useNotification()
 
-const LIMIT = 12
+const LIMIT = 100
 
 const plantillas = ref<PlantillaStockSchema[]>([])
 const total = ref(0)
@@ -130,6 +130,61 @@ const localNombre = (id: number) => locales.value.find((l) => l.id === id)?.nomb
 const productoNombre = (id: number) => productos.value.find((p) => p.id === id)?.nombre ?? `#${id}`
 
 const productoUnidad = (id: number) => productos.value.find((p) => p.id === id)?.unidad_medida ?? ''
+
+const formatearCantidad = (n: number | string | null | undefined) => {
+  const num = Number(n ?? 0)
+  if (Number.isNaN(num)) return String(n ?? '')
+  return Number.isInteger(num) ? String(num) : num.toFixed(2).replace(/\.?0+$/, '')
+}
+
+const unidadLegible = (unidad: string | null | undefined, cantidad: number | string) => {
+  const u = (unidad || '').trim().toLowerCase()
+  if (!u || u === 'otros') return ''
+  const num = Number(cantidad ?? 0)
+  const singular = Math.abs(num) === 1
+  const map: Record<string, [string, string]> = {
+    kg: ['kg', 'kg'],
+    unidades: ['unidad', 'unidades'],
+    litros: ['litro', 'litros'],
+    atados: ['atado', 'atados'],
+    cajas: ['caja', 'cajas'],
+    sacos: ['saco', 'sacos'],
+    bandejas: ['bandeja', 'bandejas'],
+    planchas: ['plancha', 'planchas'],
+  }
+  const par = map[u]
+  if (!par) return u
+  return singular ? par[0] : par[1]
+}
+
+const unidadPlural = (unidad: string | null | undefined) => {
+  const u = (unidad || '').trim().toLowerCase()
+  if (!u || u === 'otros') return ''
+  const map: Record<string, string> = {
+    kg: 'kg',
+    unidades: 'unidades',
+    litros: 'litros',
+    atados: 'atados',
+    cajas: 'cajas',
+    sacos: 'sacos',
+    bandejas: 'bandejas',
+    planchas: 'planchas',
+  }
+  return map[u] ?? u
+}
+
+const unidadConector = (unidad: string | null | undefined) => {
+  const u = unidadPlural(unidad)
+  return u ? `en ${u}` : ''
+}
+
+const preguntaPasoTres = computed(() => {
+  const u = unidadPlural(productoUnidad(form.value.producto_id ?? 0))
+  const producto = productoNombre(form.value.producto_id ?? 0).toLowerCase()
+  const local = localNombre(form.value.local_id ?? 0)
+  if (!u) return `¿Cuánto de ${producto} debe tener ${local} cada día?`
+  return `¿Cuántas ${u} de ${producto} debe tener ${local} cada día?`
+})
 
 const productosFiltradosModal = computed(() => {
   const q = productoBusquedaModal.value.trim().toLowerCase()
@@ -312,101 +367,107 @@ const confirmarEliminar = async () => {
         </select>
       </div>
 
-      <!-- Tabla de plantillas: Producto / Objetivo / Acciones -->
-      <table class="w-full">
-        <thead>
-          <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
-            <th
-              class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Producto
-            </th>
-            <th
-              class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Unidad
-            </th>
-            <th
-              class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Objetivo
-            </th>
-            <th
-              class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <template v-if="cargando">
-            <tr v-for="n in 5" :key="`sk-${n}`" class="border-b border-[var(--bg-200)]">
-              <td class="px-3 py-3 sm:px-4">
-                <div class="h-5 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-2 py-3 sm:px-4">
-                <div class="ml-auto h-5 w-12 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-3 py-3 sm:px-4">
-                <div class="ml-auto h-8 w-20 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-            </tr>
-          </template>
+      <!-- Encabezado con nombre del local seleccionado -->
+      <div
+        v-if="localFiltro != null"
+        class="flex flex-wrap items-start gap-3 border-b border-[var(--bg-200)] bg-gradient-to-r from-cyan-50 to-white px-5 py-4 sm:flex-nowrap sm:items-center sm:px-6"
+      >
+        <div
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-600 ring-1 ring-cyan-500/20"
+        >
+          <MapPin :size="18" />
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-cyan-600">
+            Plantilla diaria
+          </p>
+          <h2 class="text-sm font-bold leading-snug text-[var(--text-100)] sm:text-lg">
+            Productos que debe tener
+            <span class="text-cyan-600">{{ localNombre(localFiltro) }}</span>
+            diariamente
+          </h2>
+        </div>
+        <span
+          v-if="!cargando"
+          class="ml-auto shrink-0 rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700"
+        >
+          {{ total }} {{ total === 1 ? 'producto' : 'productos' }}
+        </span>
+      </div>
 
-          <tr v-else-if="plantillas.length === 0">
-            <td colspan="4" class="px-4 py-12 text-center">
-              <ClipboardList :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
-              <p class="font-semibold text-[var(--text-100)]">No hay plantillas</p>
-              <p class="mt-1 text-sm text-[var(--text-200)]">
-                Creá la primera plantilla con el botón de arriba.
-              </p>
-            </td>
-          </tr>
+      <!-- Lista de plantillas en lenguaje natural -->
+      <div v-if="cargando" class="divide-y divide-[var(--bg-200)]">
+        <div v-for="n in 6" :key="`sk-${n}`" class="flex items-center gap-3 px-4 py-3 sm:px-6">
+          <div class="h-10 w-10 shrink-0 animate-pulse rounded-xl bg-[var(--bg-200)]"></div>
+          <div class="h-5 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
+          <div class="ml-auto h-8 w-16 animate-pulse rounded bg-[var(--bg-200)]"></div>
+        </div>
+      </div>
 
-          <tr
-            v-else
-            v-for="(p, idx) in plantillas"
-            :key="p.id ?? `idx-${idx}`"
-            class="border-b border-[var(--bg-200)] last:border-0 transition-colors hover:bg-[var(--bg-100)]/40"
+      <div v-else-if="plantillas.length === 0" class="px-4 py-12 text-center">
+        <ClipboardList :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
+        <p class="font-semibold text-[var(--text-100)]">No hay plantillas</p>
+        <p class="mt-1 text-sm text-[var(--text-200)]">
+          Creá la primera plantilla con el botón de arriba.
+        </p>
+      </div>
+
+      <ul v-else class="divide-y divide-[var(--bg-200)]/70">
+        <li
+          v-for="(p, idx) in plantillas"
+          :key="p.id ?? `idx-${idx}`"
+          class="group relative flex items-center gap-3 px-4 py-3 transition-all hover:bg-cyan-50/40 sm:gap-4 sm:px-6 sm:py-3.5"
+        >
+          <span
+            class="absolute left-0 top-0 h-full w-1 origin-top scale-y-0 bg-cyan-500 transition-transform group-hover:scale-y-100"
+            aria-hidden="true"
+          ></span>
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-100 to-cyan-50 text-cyan-600 ring-1 ring-cyan-500/15 transition-transform group-hover:scale-105 sm:h-11 sm:w-11"
           >
-            <td
-              class="w-full max-w-0 px-3 py-2.5 text-sm font-medium text-[var(--text-100)] sm:px-4 sm:py-3"
+            <Package :size="20" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-[var(--text-100)] sm:text-base">
+              {{ p.producto_nombre }}
+            </p>
+            <p class="mt-0.5 text-xs text-[var(--text-200)] sm:text-sm">
+              Necesita
+              <span class="font-semibold text-cyan-700">
+                {{ formatearCantidad(p.cantidad_objetivo) }}
+                {{ unidadLegible(p.producto_unidad_medida, p.cantidad_objetivo) }}
+              </span>
+              por día
+            </p>
+          </div>
+          <span
+            class="hidden shrink-0 items-center gap-1 rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-bold text-cyan-700 ring-1 ring-cyan-500/20 sm:inline-flex"
+          >
+            {{ formatearCantidad(p.cantidad_objetivo) }}
+            <span class="font-medium text-cyan-600/80">
+              {{ unidadLegible(p.producto_unidad_medida, p.cantidad_objetivo) }}
+            </span>
+          </span>
+          <div class="flex shrink-0 gap-1.5">
+            <button
+              type="button"
+              @click="abrirEditar(p)"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
+              title="Editar"
             >
-              <span class="block truncate">{{ p.producto_nombre }}</span>
-            </td>
-            <td
-              class="whitespace-nowrap px-2 py-2.5 text-left text-sm text-[var(--text-200)] sm:px-4 sm:py-3"
+              <Pencil :size="16" />
+            </button>
+            <button
+              type="button"
+              @click="abrirEliminar(p)"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
+              title="Eliminar"
             >
-              {{ p.producto_unidad_medida || '-' }}
-            </td>
-            <td
-              class="whitespace-nowrap px-2 py-2.5 text-right text-sm font-semibold text-[var(--text-100)] sm:px-4 sm:py-3"
-            >
-              {{ p.cantidad_objetivo }}
-            </td>
-            <td class="whitespace-nowrap px-3 py-2.5 sm:px-4 sm:py-3">
-              <div class="flex justify-end gap-1.5">
-                <button
-                  type="button"
-                  @click="abrirEditar(p)"
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
-                  title="Editar"
-                >
-                  <Pencil :size="16" />
-                </button>
-                <button
-                  type="button"
-                  @click="abrirEliminar(p)"
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
-                  title="Eliminar"
-                >
-                  <Trash2 :size="16" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <Trash2 :size="16" />
+            </button>
+          </div>
+        </li>
+      </ul>
 
       <div
         v-if="!cargando && plantillas.length > 0"
@@ -482,10 +543,10 @@ const confirmarEliminar = async () => {
         </div>
 
         <div v-if="pasoCrear === 2">
-          <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">
-            Elegí el producto <span class="text-red-500">*</span>
+          <label class="mb-2 block text-sm font-medium text-[var(--text-100)]">
+            ¿Qué producto querés agregar? <span class="text-red-500">*</span>
           </label>
-          <div class="relative mb-2">
+          <div class="relative mb-3">
             <Search
               :size="16"
               class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-200)]"
@@ -497,27 +558,44 @@ const confirmarEliminar = async () => {
               class="w-full rounded-lg border border-[var(--bg-300)] bg-white py-2 pl-9 pr-3 text-sm text-[var(--text-100)] placeholder-[var(--text-200)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
             />
           </div>
-          <div class="rounded-lg border border-[var(--bg-300)] bg-white">
-            <div class="max-h-56 overflow-y-auto p-1.5">
+          <div class="rounded-xl border border-[var(--bg-300)] bg-white">
+            <div class="max-h-72 space-y-1.5 overflow-y-auto p-2">
               <button
                 v-for="p in productosFiltradosModal"
                 :key="p.id ?? p.nombre"
                 type="button"
-                class="mb-1 flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left transition-colors last:mb-0"
+                class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all"
                 :class="
                   form.producto_id === p.id
-                    ? 'bg-cyan-100 text-cyan-800'
-                    : 'hover:bg-[var(--bg-100)] text-[var(--text-100)]'
+                    ? 'border-cyan-400 bg-gradient-to-r from-cyan-50 to-white shadow-sm ring-2 ring-cyan-400/30'
+                    : 'border-transparent hover:border-cyan-200 hover:bg-cyan-50/40'
                 "
                 @click="seleccionarProductoModal(p.id)"
               >
-                <span class="flex items-center gap-2 truncate text-sm font-medium">
-                  <Package :size="14" class="shrink-0" />
-                  {{ p.nombre }}
+                <div
+                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-100 to-cyan-50 text-cyan-600 ring-1 ring-cyan-500/15"
+                >
+                  <Package :size="20" />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p
+                    class="truncate text-base font-bold capitalize text-[var(--text-100)] sm:text-lg"
+                  >
+                    {{ p.nombre }}
+                  </p>
+                  <p
+                    v-if="unidadConector(p.unidad_medida)"
+                    class="mt-0.5 text-sm font-medium text-cyan-700"
+                  >
+                    {{ unidadConector(p.unidad_medida) }}
+                  </p>
+                </div>
+                <span
+                  v-if="form.producto_id === p.id"
+                  class="shrink-0 rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+                >
+                  Elegido
                 </span>
-                <span class="ml-2 shrink-0 text-xs text-[var(--text-200)]">{{
-                  p.unidad_medida
-                }}</span>
               </button>
               <p
                 v-if="productosFiltradosModal.length === 0"
@@ -534,30 +612,35 @@ const confirmarEliminar = async () => {
           </div>
         </div>
 
-        <div v-if="pasoCrear === 3" class="space-y-3">
+        <div v-if="pasoCrear === 3" class="space-y-4">
           <div
-            class="rounded-lg border border-[var(--bg-300)] bg-[var(--bg-100)]/60 p-3 text-xs sm:text-sm"
+            class="rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-white p-4"
           >
-            <p class="font-semibold text-[var(--text-100)]">Resumen de plantilla</p>
-            <p class="mt-1 text-[var(--text-200)]">Local: {{ localNombre(form.local_id ?? 0) }}</p>
-            <p class="text-[var(--text-200)]">
-              Producto: {{ productoNombre(form.producto_id ?? 0) }}
-            </p>
-            <p class="text-[var(--text-200)]">
-              Unidad: {{ productoUnidad(form.producto_id ?? 0) || '-' }}
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-cyan-600">Pregunta</p>
+            <p class="mt-1 text-base font-bold leading-snug text-[var(--text-100)] sm:text-lg">
+              {{ preguntaPasoTres }}
             </p>
           </div>
           <div>
-            <label class="mb-1 block text-sm font-medium text-[var(--text-100)]"
-              >Cantidad objetivo <span class="text-red-500">*</span></label
-            >
-            <input
-              v-model="form.cantidad"
-              type="number"
-              step="0.01"
-              min="0"
-              class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-            />
+            <label class="mb-1.5 block text-sm font-medium text-[var(--text-100)]">
+              Tu respuesta <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <input
+                v-model="form.cantidad"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0"
+                class="w-full rounded-xl border border-[var(--bg-300)] bg-white px-4 py-3 pr-24 text-2xl font-bold text-[var(--text-100)] focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+              />
+              <span
+                v-if="unidadPlural(productoUnidad(form.producto_id ?? 0))"
+                class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-cyan-600"
+              >
+                {{ unidadPlural(productoUnidad(form.producto_id ?? 0)) }}
+              </span>
+            </div>
           </div>
         </div>
       </template>

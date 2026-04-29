@@ -18,7 +18,7 @@ import { UNIDADES_MEDIDA } from '@/utils/unidadesMedida'
 
 const { success, error: notifyError } = useNotification()
 
-const LIMIT = 12
+const LIMIT = 100
 
 const productos = ref<ProductoSchema[]>([])
 const total = ref(0)

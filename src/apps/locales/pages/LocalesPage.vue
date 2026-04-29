@@ -17,7 +17,7 @@ import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
 
 const { success, error: notifyError } = useNotification()
 
-const LIMIT = 12
+const LIMIT = 100
 
 const locales = ref<LocalSchema[]>([])
 const total = ref(0)
