@@ -928,7 +928,7 @@ const estadoClass = (estado?: string) => {
         </BaseButton>
 
         <BaseButton
-          v-else
+          v-if="todosContados || stepIdx === totalSteps - 1"
           variant="success"
           :loading="finalizando || guardandoPaso"
           @click="finalizarConteo"
