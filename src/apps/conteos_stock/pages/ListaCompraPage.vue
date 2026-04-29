@@ -394,7 +394,7 @@ const formatNum = (n: number | string | null | undefined) => {
             </thead>
             <tbody>
               <tr
-                v-for="(it, idx) in loc.items"
+                v-for="(it, idx) in [...loc.items].reverse()"
                 :key="`${it.producto_id}-${idx}`"
                 class="border-b border-[var(--bg-200)] last:border-0"
               >

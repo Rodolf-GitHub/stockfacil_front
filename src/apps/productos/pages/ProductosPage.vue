@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { Package, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { Package, Pencil, Plus, Search, Sparkles, Trash2 } from 'lucide-vue-next'
 import {
   productoApiActualizarProducto,
   productoApiCrearProducto,
@@ -41,6 +41,47 @@ const eliminando = ref(false)
 const authOptions = (): RequestInit => ({
   headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
 })
+
+const unidadConector = (unidad: string | null | undefined) => {
+  const u = (unidad || '').trim().toLowerCase()
+  if (!u || u === 'otros') return ''
+  const map: Record<string, string> = {
+    kg: 'kilogramos',
+    unidades: 'unidades',
+    litros: 'litros',
+    atados: 'atados',
+    cajas: 'cajas',
+    sacos: 'sacos',
+    bandejas: 'bandejas',
+    planchas: 'planchas',
+  }
+  return `en ${map[u] ?? u}`
+}
+
+const RECIENTE_HORAS = 30
+
+const horasDesde = (fecha: string | null | undefined): number | null => {
+  if (!fecha) return null
+  const t = new Date(fecha).getTime()
+  if (Number.isNaN(t)) return null
+  return (Date.now() - t) / (1000 * 60 * 60)
+}
+
+const esReciente = (fecha: string | null | undefined) => {
+  const h = horasDesde(fecha)
+  return h != null && h >= 0 && h < RECIENTE_HORAS
+}
+
+const textoReciente = (fecha: string | null | undefined) => {
+  const h = horasDesde(fecha)
+  if (h == null) return ''
+  if (h < 1) {
+    const min = Math.max(1, Math.floor(h * 60))
+    return `hace ${min} ${min === 1 ? 'minuto' : 'minutos'}`
+  }
+  const horas = Math.floor(h)
+  return `hace ${horas} ${horas === 1 ? 'hora' : 'horas'}`
+}
 
 const cargar = async () => {
   cargando.value = true
@@ -202,110 +243,105 @@ const formatPrecio = (precio: string) => {
         </div>
       </div>
 
-      <!-- Tabla de productos -->
-      <table class="w-full">
-        <thead>
-          <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
-            <th
-              class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Producto
-            </th>
-            <th
-              class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Unidad
-            </th>
-            <th
-              class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Precio
-            </th>
-            <th
-              class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <template v-if="cargando">
-            <tr v-for="n in 5" :key="`sk-${n}`" class="border-b border-[var(--bg-200)]">
-              <td class="px-3 py-3 sm:px-4">
-                <div class="h-5 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-2 py-3 sm:px-4">
-                <div class="h-5 w-16 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-2 py-3 sm:px-4">
-                <div class="ml-auto h-5 w-16 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-3 py-3 sm:px-4">
-                <div class="ml-auto h-8 w-20 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-            </tr>
-          </template>
+      <!-- Lista de productos en lenguaje natural -->
+      <div v-if="cargando" class="divide-y divide-[var(--bg-200)]">
+        <div v-for="n in 6" :key="`sk-${n}`" class="flex items-center gap-3 px-4 py-3 sm:px-6">
+          <div class="h-10 w-10 shrink-0 animate-pulse rounded-xl bg-[var(--bg-200)]"></div>
+          <div class="h-5 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
+          <div class="ml-auto h-8 w-16 animate-pulse rounded bg-[var(--bg-200)]"></div>
+        </div>
+      </div>
 
-          <tr v-else-if="productos.length === 0">
-            <td colspan="4" class="px-4 py-12 text-center">
-              <Package :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
-              <p class="font-semibold text-[var(--text-100)]">No hay productos</p>
-              <p class="mt-1 text-sm text-[var(--text-200)]">
-                {{
-                  busqueda
-                    ? 'Ningún producto coincide con la búsqueda.'
-                    : 'Aún no hay productos en el catálogo.'
-                }}
-              </p>
-            </td>
-          </tr>
+      <div v-else-if="productos.length === 0" class="px-4 py-12 text-center">
+        <Package :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
+        <p class="font-semibold text-[var(--text-100)]">No hay productos</p>
+        <p class="mt-1 text-sm text-[var(--text-200)]">
+          {{
+            busqueda
+              ? 'Ningún producto coincide con la búsqueda.'
+              : 'Aún no hay productos en el catálogo.'
+          }}
+        </p>
+      </div>
 
-          <tr
-            v-else
-            v-for="p in productos"
-            :key="p.id ?? p.nombre"
-            class="border-b border-[var(--bg-200)] last:border-0 transition-colors hover:bg-[var(--bg-100)]/40"
+      <ul v-else class="divide-y divide-[var(--bg-200)]/70">
+        <li
+          v-for="p in productos"
+          :key="p.id ?? p.nombre"
+          class="group relative flex items-center gap-3 px-4 py-3 transition-all hover:bg-amber-50/40 sm:gap-4 sm:px-6 sm:py-3.5"
+          :class="
+            esReciente(p.updated_at)
+              ? 'bg-gradient-to-r from-blue-50/80 via-blue-50/30 to-transparent ring-1 ring-inset ring-blue-300/60'
+              : ''
+          "
+        >
+          <span
+            class="absolute left-0 top-0 h-full w-1 origin-top scale-y-0 transition-transform group-hover:scale-y-100"
+            :class="esReciente(p.updated_at) ? 'bg-blue-500 scale-y-100' : 'bg-amber-500'"
+            aria-hidden="true"
+          ></span>
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ring-1 transition-transform group-hover:scale-105 sm:h-11 sm:w-11"
+            :class="
+              esReciente(p.updated_at)
+                ? 'from-blue-100 to-blue-50 text-blue-600 ring-blue-500/20'
+                : 'from-amber-100 to-amber-50 text-amber-600 ring-amber-500/15'
+            "
           >
-            <td
-              class="w-full max-w-0 px-3 py-2.5 text-sm font-medium text-[var(--text-100)] sm:px-4 sm:py-3"
-            >
-              <span class="block truncate">{{ p.nombre }}</span>
-            </td>
-            <td class="whitespace-nowrap px-2 py-2.5 sm:px-4 sm:py-3">
-              <span
-                class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700"
+            <Package :size="20" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p
+                class="truncate text-sm font-semibold capitalize text-[var(--text-100)] sm:text-base"
               >
-                {{ p.unidad_medida || 'unidades' }}
+                {{ p.nombre }}
+                <span
+                  v-if="unidadConector(p.unidad_medida)"
+                  class="font-medium normal-case text-amber-700"
+                >
+                  {{ unidadConector(p.unidad_medida) }}
+                </span>
+              </p>
+              <span
+                v-if="esReciente(p.updated_at)"
+                class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 ring-1 ring-blue-300/60 sm:text-[11px]"
+              >
+                <Sparkles :size="11" class="shrink-0" />
+                Actualizado recientemente
               </span>
-            </td>
-            <td
-              class="whitespace-nowrap px-2 py-2.5 text-right text-sm font-semibold text-[var(--text-100)] sm:px-4 sm:py-3"
+            </div>
+            <p class="mt-0.5 text-xs text-[var(--text-200)] sm:text-sm">
+              <template v-if="esReciente(p.updated_at)">
+                <span class="font-semibold text-blue-700">{{ textoReciente(p.updated_at) }}</span>
+                <span class="text-[var(--text-200)]"> · </span>
+              </template>
+              Precio:
+              <span class="font-semibold text-[var(--text-100)]"
+                >$ {{ formatPrecio(p.precio) }}</span
+              >
+            </p>
+          </div>
+          <div class="flex shrink-0 gap-1.5">
+            <button
+              type="button"
+              @click="abrirEditar(p)"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
+              title="Editar"
             >
-              $ {{ formatPrecio(p.precio) }}
-            </td>
-            <td class="whitespace-nowrap px-3 py-2.5 sm:px-4 sm:py-3">
-              <div class="flex justify-end gap-1.5">
-                <button
-                  type="button"
-                  @click="abrirEditar(p)"
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
-                  title="Editar"
-                >
-                  <Pencil :size="16" />
-                </button>
-                <button
-                  type="button"
-                  @click="abrirEliminar(p)"
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
-                  title="Eliminar"
-                >
-                  <Trash2 :size="16" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <Pencil :size="16" />
+            </button>
+            <button
+              type="button"
+              @click="abrirEliminar(p)"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
+              title="Eliminar"
+            >
+              <Trash2 :size="16" />
+            </button>
+          </div>
+        </li>
+      </ul>
 
       <div
         v-if="!cargando && productos.length > 0"
