@@ -394,7 +394,9 @@ const formatNum = (n: number | string | null | undefined) => {
             </thead>
             <tbody>
               <tr
-                v-for="(it, idx) in [...loc.items].reverse()"
+                v-for="(it, idx) in [...loc.items].sort((a, b) =>
+                  a.producto_nombre.localeCompare(b.producto_nombre),
+                )"
                 :key="`${it.producto_id}-${idx}`"
                 class="border-b border-[var(--bg-200)] last:border-0"
               >
