@@ -57,4 +57,12 @@ export default defineConfig({
       client: 'fetch',
     },
   },
+  unidadesMedida: {
+    input: './src/openapi/unidades-medida.json',
+    output: {
+      target: './src/apps/unidades_medida/api/index.ts',
+      schemas: './src/apps/unidades_medida/api/schemas',
+      client: 'fetch',
+    },
+  },
 })

@@ -1,0 +1,290 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NinjaAPI",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "paths": {
+    "/api/unidades-medida/listar": {
+      "get": {
+        "operationId": "unidad_medida_api_listar_unidades",
+        "summary": "Listar Unidades",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "busqueda",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Busqueda"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedUnidadMedidaSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Unidades de Medida"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/unidades-medida/crear": {
+      "post": {
+        "operationId": "unidad_medida_api_crear_unidad",
+        "summary": "Crear Unidad",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Unidades de Medida"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnidadMedidaCreateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/unidades-medida/actualizar/{unidad_id}": {
+      "put": {
+        "operationId": "unidad_medida_api_actualizar_unidad",
+        "summary": "Actualizar Unidad",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unidad_id",
+            "schema": {
+              "title": "Unidad Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnidadMedidaSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Unidades de Medida"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnidadMedidaUpdateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    },
+    "/api/unidades-medida/eliminar/{unidad_id}": {
+      "delete": {
+        "operationId": "unidad_medida_api_eliminar_unidad",
+        "summary": "Eliminar Unidad",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unidad_id",
+            "schema": {
+              "title": "Unidad Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": ["Unidades de Medida"],
+        "security": [
+          {
+            "AuthBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Input": {
+        "properties": {
+          "limit": {
+            "default": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "title": "Input",
+        "type": "object"
+      },
+      "PagedUnidadMedidaSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnidadMedidaSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "count"],
+        "title": "PagedUnidadMedidaSchema",
+        "type": "object"
+      },
+      "UnidadMedidaSchema": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "ID"
+          },
+          "nombre": {
+            "maxLength": 50,
+            "title": "Nombre",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": ["nombre", "created_at", "updated_at"],
+        "title": "UnidadMedidaSchema",
+        "type": "object"
+      },
+      "UnidadMedidaCreateSchema": {
+        "properties": {
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          }
+        },
+        "required": ["nombre"],
+        "title": "UnidadMedidaCreateSchema",
+        "type": "object"
+      },
+      "UnidadMedidaUpdateSchema": {
+        "properties": {
+          "nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          }
+        },
+        "title": "UnidadMedidaUpdateSchema",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "AuthBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "servers": []
+}
