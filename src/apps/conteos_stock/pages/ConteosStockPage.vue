@@ -163,10 +163,18 @@ const unidadPlural = (unidad: string | null | undefined) => {
   return map[u] ?? u
 }
 
+const fechaHoyLocal = () => {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dia}`
+}
+
 const abrirCrear = () => {
   crearForm.value = {
     local_id: localFiltro.value,
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: fechaHoyLocal(),
   }
   showCrearModal.value = true
 }
