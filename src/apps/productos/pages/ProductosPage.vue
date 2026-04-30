@@ -8,15 +8,17 @@ import {
   productoApiListarProductos,
 } from '@/apps/productos/api'
 import type { ProductoSchema } from '@/apps/productos/api/schemas'
+import { unidadMedidaApiListarUnidades } from '@/apps/unidades_medida/api'
+import type { UnidadMedidaSchema } from '@/apps/unidades_medida/api/schemas'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import BasePagination from '@/components/BasePagination.vue'
 import { useNotification } from '@/composables/useNotification'
 import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
-import { UNIDADES_MEDIDA } from '@/utils/unidadesMedida'
 
 const { success, error: notifyError } = useNotification()
+const esAdmin = localStorage.getItem('es_admin') === 'true'
 
 const LIMIT = 100
 
@@ -37,6 +39,8 @@ const guardando = ref(false)
 const showDeleteModal = ref(false)
 const productoAEliminar = ref<ProductoSchema | null>(null)
 const eliminando = ref(false)
+
+const unidadesMedida = ref<UnidadMedidaSchema[]>([])
 
 const authOptions = (): RequestInit => ({
   headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
@@ -101,19 +105,35 @@ const cargar = async () => {
   }
 }
 
+const cargarUnidades = async () => {
+  try {
+    const res = await unidadMedidaApiListarUnidades({ limit: 200 }, {
+      ...authOptions(),
+      fetch: fetchWithBaseUrl,
+    } as RequestInit)
+    if (res.status >= 200 && res.status < 300) {
+      unidadesMedida.value = res.data.items
+    }
+  } catch {
+    /* sin bloquear */
+  }
+}
+
 watch(busqueda, () => {
   offset.value = 0
   cargar()
 })
 watch(offset, cargar)
-onMounted(cargar)
+onMounted(async () => {
+  await Promise.all([cargar(), cargarUnidades()])
+})
 
 const abrirCrear = () => {
   modoEditar.value = false
   productoSeleccionado.value = null
   nombreForm.value = ''
   precioForm.value = ''
-  unidadMedidaForm.value = 'unidades'
+  unidadMedidaForm.value = unidadesMedida.value[0]?.nombre ?? ''
   showFormModal.value = true
 }
 
@@ -218,6 +238,7 @@ const formatPrecio = (precio: string) => {
         </div>
       </div>
       <button
+        v-if="esAdmin"
         type="button"
         @click="abrirCrear"
         class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-amber-600 shadow-sm transition-all hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/50"
@@ -322,7 +343,7 @@ const formatPrecio = (precio: string) => {
               >
             </p>
           </div>
-          <div class="flex shrink-0 gap-1.5">
+          <div v-if="esAdmin" class="flex shrink-0 gap-1.5">
             <button
               type="button"
               @click="abrirEditar(p)"
@@ -387,8 +408,9 @@ const formatPrecio = (precio: string) => {
           required
           class="w-full rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
         >
-          <option v-for="u in UNIDADES_MEDIDA" :key="u.value" :value="u.value">
-            {{ u.label }}
+          <option value="">— Seleccioná una unidad —</option>
+          <option v-for="u in unidadesMedida" :key="u.id ?? u.nombre" :value="u.nombre">
+            {{ u.nombre }}
           </option>
         </select>
       </div>

@@ -12,6 +12,7 @@ import {
   MapPin,
   Menu,
   Package,
+  Ruler,
   ShoppingCart,
   User,
   Users,
@@ -108,8 +109,16 @@ const cambiarPassword = async () => {
               >
             </RouterLink>
           </div>
-          <div class="flex items-center">
-            <div class="ms-3 flex items-center relative">
+          <div class="flex items-center gap-1">
+            <!-- Ayuda (icono en navbar) -->
+            <RouterLink
+              to="/ayuda"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white shadow-sm transition-all hover:bg-white/35 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-white/40"
+              title="Ayuda"
+            >
+              <CircleHelp :size="20" />
+            </RouterLink>
+            <div class="ms-1 flex items-center relative">
               <div>
                 <button
                   @click="toggleUserMenu"
@@ -189,7 +198,7 @@ const cambiarPassword = async () => {
             </RouterLink>
           </li>
 
-          <!-- Productos -->
+          <!-- Productos + submenu -->
           <li>
             <RouterLink
               @click="closeSidebarOnMobile"
@@ -205,6 +214,19 @@ const cambiarPassword = async () => {
                 <span class="text-xs text-[var(--text-200)]">Catálogo y stock</span>
               </span>
             </RouterLink>
+            <ul v-if="esAdmin" class="ml-4 mt-0.5 space-y-0.5 border-l border-[var(--bg-300)] pl-3">
+              <li>
+                <RouterLink
+                  @click="closeSidebarOnMobile"
+                  to="/unidades-medida"
+                  class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--text-200)] transition-colors hover:bg-amber-50 hover:text-amber-700"
+                  active-class="bg-amber-50 font-semibold text-amber-700"
+                >
+                  <Ruler class="h-4 w-4 shrink-0" :stroke-width="2" />
+                  Unidades de medida
+                </RouterLink>
+              </li>
+            </ul>
           </li>
 
           <!-- Locales (solo admin) -->
@@ -225,7 +247,7 @@ const cambiarPassword = async () => {
             </RouterLink>
           </li>
 
-          <!-- Usuarios (solo admin) -->
+          <!-- Usuarios + submenu (solo admin) -->
           <li v-if="esAdmin">
             <RouterLink
               @click="closeSidebarOnMobile"
@@ -241,24 +263,19 @@ const cambiarPassword = async () => {
                 <span class="text-xs text-[var(--text-200)]">Gestión de cuentas</span>
               </span>
             </RouterLink>
-          </li>
-
-          <!-- Asignaciones (solo admin) -->
-          <li v-if="esAdmin">
-            <RouterLink
-              @click="closeSidebarOnMobile"
-              to="/asignaciones"
-              class="nav-link"
-              active-class="nav-link-active"
-            >
-              <span class="nav-icon bg-rose-100 text-rose-600">
-                <Link2 class="h-5 w-5" :stroke-width="2" />
-              </span>
-              <span class="flex flex-col">
-                <span class="text-sm font-semibold">Asignaciones</span>
-                <span class="text-xs text-[var(--text-200)]">Usuarios y locales</span>
-              </span>
-            </RouterLink>
+            <ul class="ml-4 mt-0.5 space-y-0.5 border-l border-[var(--bg-300)] pl-3">
+              <li>
+                <RouterLink
+                  @click="closeSidebarOnMobile"
+                  to="/asignaciones"
+                  class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--text-200)] transition-colors hover:bg-violet-50 hover:text-violet-700"
+                  active-class="bg-violet-50 font-semibold text-violet-700"
+                >
+                  <Link2 class="h-4 w-4 shrink-0" :stroke-width="2" />
+                  Asignaciones
+                </RouterLink>
+              </li>
+            </ul>
           </li>
 
           <!-- Plantillas -->
@@ -311,24 +328,6 @@ const cambiarPassword = async () => {
               <span class="flex flex-col">
                 <span class="text-sm font-semibold">Compras</span>
                 <span class="text-xs text-[var(--text-200)]">Lista de compras</span>
-              </span>
-            </RouterLink>
-          </li>
-
-          <!-- Ayuda -->
-          <li>
-            <RouterLink
-              @click="closeSidebarOnMobile"
-              to="/ayuda"
-              class="nav-link"
-              active-class="nav-link-active"
-            >
-              <span class="nav-icon bg-sky-100 text-sky-600">
-                <CircleHelp class="h-5 w-5" :stroke-width="2" />
-              </span>
-              <span class="flex flex-col">
-                <span class="text-sm font-semibold">Ayuda</span>
-                <span class="text-xs text-[var(--text-200)]">Guía y soporte</span>
               </span>
             </RouterLink>
           </li>

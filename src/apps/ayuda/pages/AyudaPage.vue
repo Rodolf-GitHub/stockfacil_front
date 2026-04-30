@@ -12,6 +12,7 @@ import {
   Mail,
   MapPin,
   Package,
+  Ruler,
   ShieldCheck,
   ShoppingCart,
   Users,
@@ -69,6 +70,12 @@ const seccionesAdmin: AyudaSeccion[] = [
     descripcion: 'Relacionar usuarios con locales para delimitar su operación.',
     to: '/asignaciones',
   },
+  {
+    titulo: 'Unidades de medida',
+    descripcion:
+      'Configurar las unidades con las que se miden los productos (kg, cajas, unidades, etc.).',
+    to: '/unidades-medida',
+  },
 ]
 
 const seccionesUsuario: AyudaSeccion[] = [
@@ -95,6 +102,7 @@ const iconoPorSeccion = (titulo: string) => {
   if (key === 'locales') return MapPin
   if (key === 'usuarios') return Users
   if (key === 'asignaciones') return Link2
+  if (key === 'unidades de medida') return Ruler
   if (key === 'acceso y permisos') return ShieldCheck
   return CircleHelp
 }
@@ -109,6 +117,7 @@ const colorIconoPorSeccion = (titulo: string) => {
   if (key === 'locales') return 'bg-emerald-100 text-emerald-600'
   if (key === 'usuarios') return 'bg-violet-100 text-violet-600'
   if (key === 'asignaciones') return 'bg-rose-100 text-rose-600'
+  if (key === 'unidades de medida') return 'bg-amber-100 text-amber-700'
   if (key === 'acceso y permisos') return 'bg-slate-100 text-slate-700'
   return 'bg-sky-100 text-sky-600'
 }

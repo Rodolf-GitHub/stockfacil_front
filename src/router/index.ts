@@ -11,6 +11,7 @@ import ConteosStockPage from '@/apps/conteos_stock/pages/ConteosStockPage.vue'
 import ListaCompraPage from '@/apps/conteos_stock/pages/ListaCompraPage.vue'
 import ListaCompraCompletaPage from '@/apps/conteos_stock/pages/ListaCompraCompletaPage.vue'
 import AyudaPage from '@/apps/ayuda/pages/AyudaPage.vue'
+import UnidadesMedidaPage from '@/apps/unidades_medida/pages/UnidadesMedidaPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -73,6 +74,11 @@ const router = createRouter({
           path: '/ayuda',
           name: 'ayuda',
           component: AyudaPage,
+        },
+        {
+          path: '/unidades-medida',
+          name: 'unidades-medida',
+          component: UnidadesMedidaPage,
         },
       ],
     },
