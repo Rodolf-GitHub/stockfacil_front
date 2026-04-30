@@ -43,8 +43,16 @@ const cargarLocales = async () => {
   }
 }
 
+function fechaHoyLocal(): string {
+  const hoy = new Date()
+  const y = hoy.getFullYear()
+  const m = String(hoy.getMonth() + 1).padStart(2, '0')
+  const d = String(hoy.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 onMounted(async () => {
-  fecha.value = new Date().toISOString().slice(0, 10)
+  fecha.value = fechaHoyLocal()
   await cargarLocales()
 })
 
