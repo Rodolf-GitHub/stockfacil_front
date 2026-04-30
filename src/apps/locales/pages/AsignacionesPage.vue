@@ -20,7 +20,7 @@ import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
 
 const { success, error: notifyError } = useNotification()
 
-const LIMIT = 10
+const LIMIT = 100
 
 const usuarios = ref<UsuarioConLocalesSchema[]>([])
 const total = ref(0)
@@ -265,7 +265,7 @@ const desasignar = async () => {
       </div>
 
       <div
-        v-if="!cargando && total > LIMIT"
+        v-if="!cargando && total > 0"
         class="flex flex-col gap-3 border-t border-[var(--bg-200)] px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
       >
         <p class="text-sm text-[var(--text-200)]">

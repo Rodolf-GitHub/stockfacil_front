@@ -10,6 +10,7 @@ import {
   Plus,
   RotateCcw,
   Trash2,
+  X,
 } from 'lucide-vue-next'
 import {
   conteostockApiActualizarConteo,
@@ -522,7 +523,7 @@ const estadoClass = (estado?: string) => {
     </div>
 
     <div class="rounded-2xl border border-[var(--bg-300)]/50 bg-white shadow-sm">
-      <div class="grid gap-3 border-b border-[var(--bg-200)] p-3 sm:grid-cols-[1fr_180px] sm:p-4">
+      <div class="grid gap-3 border-b border-[var(--bg-200)] p-3 sm:grid-cols-[1fr_200px] sm:p-4">
         <select
           v-model="localFiltro"
           class="rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
@@ -532,11 +533,25 @@ const estadoClass = (estado?: string) => {
             {{ l.nombre }}
           </option>
         </select>
-        <input
-          v-model="fechaFiltro"
-          type="date"
-          class="rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
-        />
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center justify-between px-0.5">
+            <span class="text-xs font-medium text-[var(--text-200)]">Fecha</span>
+            <button
+              v-if="fechaFiltro"
+              type="button"
+              @click="fechaFiltro = ''"
+              class="flex items-center gap-1 text-xs font-medium text-teal-600 hover:text-teal-800"
+            >
+              <X :size="11" /> Todas las fechas
+            </button>
+            <span v-else class="text-xs text-[var(--text-200)]">Todas las fechas</span>
+          </div>
+          <input
+            v-model="fechaFiltro"
+            type="date"
+            class="w-full rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+          />
+        </div>
       </div>
 
       <!-- Tabla de conteos -->
