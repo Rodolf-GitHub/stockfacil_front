@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronDown, ShoppingCart } from 'lucide-vue-next'
+import { ArrowRight, ChevronDown, ShoppingCart } from 'lucide-vue-next'
 import { conteostockApiResumenPorFecha } from '@/apps/conteos_stock/api'
 import type { LocalSinConteoSchema, ResumenConteoSchema } from '@/apps/conteos_stock/api/schemas'
 import { localApiListarLocales } from '@/apps/locales/api'
@@ -108,45 +108,139 @@ const setFechaRapida = (dias: number) => {
 
 const esFechaRapida = (dias: number) => fecha.value === fechaConOffset(dias)
 
-const verListaCompraCompleta = () => {
+const fechaFormateada = computed(() => {
+  if (!fecha.value) return ''
+  const d = new Date(`${fecha.value}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return fecha.value
+  const meses = [
+    'enero',
+    'febrero',
+    'marzo',
+    'abril',
+    'mayo',
+    'junio',
+    'julio',
+    'agosto',
+    'septiembre',
+    'octubre',
+    'noviembre',
+    'diciembre',
+  ]
+  return `${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`
+})
+
+const colorBadgeComprar = (
+  cantActual: number | string | null | undefined,
+  cantObjetivo: number | string | null | undefined,
+) => {
+  const actual = Number(cantActual) || 0
+  const objetivo = Number(cantObjetivo) || 0
+  if (objetivo <= 0) return 'bg-rose-100 text-rose-700'
+  const pct = actual / objetivo
+  if (pct >= 0.75) return 'bg-yellow-100 text-yellow-800' // >75%: casi completo
+  if (pct >= 0.3) return 'bg-orange-200 text-orange-800' // 30-75%: comprar
+  return 'bg-red-200 text-red-800' // <30%: urgente
+}
+
+const irAlConteo = (conteoId: number) => {
+  router.push({ name: 'conteo-detalle', params: { id: conteoId } })
+}
+
+const ordenUrgente = ref<Set<number>>(new Set())
+const toggleOrdenUrgente = (conteoId: number) => {
+  const next = new Set(ordenUrgente.value)
+  if (next.has(conteoId)) next.delete(conteoId)
+  else next.add(conteoId)
+  ordenUrgente.value = next
+}
+const urgenciaPct = (it: {
+  cantidad_actual: number | string | null | undefined
+  cantidad_objetivo: number | string | null | undefined
+}) => {
+  const actual = Number(it.cantidad_actual) || 0
+  const objetivo = Number(it.cantidad_objetivo) || 0
+  return objetivo > 0 ? actual / objetivo : 1
+}
+const itemsOrdenados = (conteoId: number, items: (typeof localesResumen.value)[0]['items']) => {
+  const sorted = [...items]
+  if (ordenUrgente.value.has(conteoId)) {
+    sorted.sort((a, b) => urgenciaPct(a) - urgenciaPct(b))
+  } else {
+    sorted.sort((a, b) => a.producto_nombre.localeCompare(b.producto_nombre))
+  }
+  return sorted
+}
+
+const ordenUrgenteTotal = ref(false)
+const itemsTotalOrdenados = computed(() => {
+  const sorted = [...itemsTotalAgregado.value]
+  if (ordenUrgenteTotal.value) {
+    sorted.sort((a, b) => (Number(b.cantidad_a_comprar) || 0) - (Number(a.cantidad_a_comprar) || 0))
+  }
+  return sorted
+})
+
+const verListaCompraCompleta = (loc?: ResumenConteoSchema) => {
   type ItemListaNatural = {
     producto_id: number
     producto_nombre: string
     unidad_medida: string
     cantidad_a_comprar: number
+    cantidad_actual?: number
+    cantidad_objetivo?: number
   }
 
-  const itemsParaLista: ItemListaNatural[] = esTotal.value
-    ? itemsTotalAgregado.value.map((it) => ({
-        producto_id: it.producto_id,
-        producto_nombre: it.producto_nombre,
-        unidad_medida: it.unidad_medida,
-        cantidad_a_comprar: Number(it.cantidad_a_comprar) || 0,
-      }))
-    : (localesResumen.value[0]?.items ?? []).map((it) => ({
-        producto_id: it.producto_id,
-        producto_nombre: it.producto_nombre,
-        unidad_medida: it.unidad_medida,
-        cantidad_a_comprar: Number(it.cantidad_a_comprar) || 0,
-      }))
+  // Si se pasa un local específico, usamos sus items; si no, el comportamiento original
+  let itemsParaLista: ItemListaNatural[]
+  let snapshotLocalId: number | null
+  let snapshotLocalNombre: string
+
+  if (loc) {
+    itemsParaLista = loc.items.map((it) => ({
+      producto_id: it.producto_id,
+      producto_nombre: it.producto_nombre,
+      unidad_medida: it.unidad_medida,
+      cantidad_a_comprar: Number(it.cantidad_a_comprar) || 0,
+      cantidad_actual: Number(it.cantidad_actual) || 0,
+      cantidad_objetivo: Number(it.cantidad_objetivo) || 0,
+    }))
+    snapshotLocalId = localId.value
+    snapshotLocalNombre = loc.local_nombre
+  } else if (esTotal.value) {
+    itemsParaLista = itemsTotalAgregado.value.map((it) => ({
+      producto_id: it.producto_id,
+      producto_nombre: it.producto_nombre,
+      unidad_medida: it.unidad_medida,
+      cantidad_a_comprar: Number(it.cantidad_a_comprar) || 0,
+    }))
+    snapshotLocalId = null
+    snapshotLocalNombre = 'Todos los negocios'
+  } else {
+    itemsParaLista = (localesResumen.value[0]?.items ?? []).map((it) => ({
+      producto_id: it.producto_id,
+      producto_nombre: it.producto_nombre,
+      unidad_medida: it.unidad_medida,
+      cantidad_a_comprar: Number(it.cantidad_a_comprar) || 0,
+      cantidad_actual: Number(it.cantidad_actual) || 0,
+      cantidad_objetivo: Number(it.cantidad_objetivo) || 0,
+    }))
+    snapshotLocalId = localId.value
+    snapshotLocalNombre =
+      localId.value == null
+        ? 'Todos los negocios'
+        : (locales.value.find((l) => l.id === localId.value)?.nombre ?? 'Negocio')
+  }
 
   const snapshot = {
     fecha: fecha.value,
-    localId: localId.value,
-    localNombre:
-      localId.value == null
-        ? 'Todos los negocios'
-        : (locales.value.find((l) => l.id === localId.value)?.nombre ?? 'Negocio'),
-    items: itemsParaLista
-      .filter((it) => it.cantidad_a_comprar > 0)
-      .sort((a, b) => a.producto_nombre.localeCompare(b.producto_nombre)),
+    localId: snapshotLocalId,
+    localNombre: snapshotLocalNombre,
+    items: itemsParaLista.sort((a, b) => a.producto_nombre.localeCompare(b.producto_nombre)),
     localesSinConteo: localesSinConteo.value.map((l) => l.local_nombre),
   }
 
   sessionStorage.setItem('compras_lista_snapshot', JSON.stringify(snapshot))
-  router.push({
-    name: 'compras-completa',
-  })
+  router.push({ name: 'compras-completa' })
 }
 
 const toggle = (id: number) => {
@@ -254,7 +348,7 @@ const formatNum = (n: number | string | null | undefined) => {
       </div>
       <button
         type="button"
-        @click="verListaCompraCompleta"
+        @click="() => verListaCompraCompleta()"
         class="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition-colors hover:bg-rose-50"
       >
         Ver en formato de lista
@@ -271,11 +365,17 @@ const formatNum = (n: number | string | null | undefined) => {
           <option :value="null">Todos los locales</option>
           <option v-for="l in locales" :key="l.id ?? l.nombre" :value="l.id">{{ l.nombre }}</option>
         </select>
-        <input
-          v-model="fecha"
-          type="date"
-          class="rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
-        />
+        <div class="flex flex-col gap-1">
+          <input
+            v-model="fecha"
+            type="date"
+            class="rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+          />
+          <p v-if="fechaFormateada" class="text-right text-[10px] text-[var(--text-200)]">
+            Mostrando conteos del
+            <span class="font-semibold text-rose-600">{{ fechaFormateada }}</span>
+          </p>
+        </div>
       </div>
       <div class="mt-3 overflow-x-auto">
         <div class="flex min-w-max flex-nowrap gap-2">
@@ -352,10 +452,18 @@ const formatNum = (n: number | string | null | undefined) => {
               {{ loc.local_nombre }}
             </span>
             <span class="truncate text-xs text-[var(--text-200)]">
-              {{ loc.items.length }} ítem{{ loc.items.length !== 1 ? 's' : '' }}
+              {{ loc.items.length }} producto{{ loc.items.length !== 1 ? 's' : '' }}
             </span>
           </div>
           <div class="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+              @click.stop="irAlConteo(loc.conteo_id)"
+            >
+              <ArrowRight :size="12" />
+              Ir al conteo
+            </button>
             <span
               class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700"
             >
@@ -370,6 +478,40 @@ const formatNum = (n: number | string | null | undefined) => {
         </button>
 
         <div v-if="expandidos.has(loc.conteo_id)" class="border-t border-[var(--bg-200)]">
+          <!-- Subheader con botón urgente -->
+          <div
+            class="flex items-center justify-between border-b border-[var(--bg-200)] bg-[var(--bg-100)]/60 px-3 py-2 sm:px-4"
+          >
+            <span class="text-[11px] text-[var(--text-200)]"
+              >{{ loc.items.length }} producto{{ loc.items.length !== 1 ? 's' : '' }}</span
+            >
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors"
+                :class="
+                  ordenUrgente.has(loc.conteo_id)
+                    ? 'border-red-300 bg-red-600 text-white'
+                    : 'border-[var(--bg-300)] bg-white text-[var(--text-200)] hover:bg-red-50 hover:text-red-700'
+                "
+                @click="toggleOrdenUrgente(loc.conteo_id)"
+              >
+                ⚠️
+                {{
+                  ordenUrgente.has(loc.conteo_id)
+                    ? 'Orden: urgentes primero'
+                    : 'Ver urgentes primero'
+                }}
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+                @click="verListaCompraCompleta(loc)"
+              >
+                📋 Ver pantalla completa
+              </button>
+            </div>
+          </div>
           <table v-if="loc.items.length > 0" class="w-full">
             <thead>
               <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
@@ -379,52 +521,90 @@ const formatNum = (n: number | string | null | undefined) => {
                   Producto
                 </th>
                 <th
-                  class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
+                  class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
+                  title="Cantidad objetivo según plantilla"
                 >
-                  Unidad
+                  Necesitás
                 </th>
                 <th
                   class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
+                  title="Cantidad actual en stock según conteo"
                 >
-                  Obj.
-                </th>
-                <th
-                  class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
-                >
-                  Act.
+                  Tenés
                 </th>
                 <th
                   class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
                 >
-                  Comprar
+                  Comprá
                 </th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="(it, idx) in [...loc.items].sort((a, b) =>
-                  a.producto_nombre.localeCompare(b.producto_nombre),
-                )"
+                v-for="(it, idx) in itemsOrdenados(loc.conteo_id, loc.items)"
                 :key="`${it.producto_id}-${idx}`"
-                class="border-b border-[var(--bg-200)] last:border-0"
+                class="border-b border-[var(--bg-200)] last:border-0 transition-colors"
+                :class="Number(it.cantidad_a_comprar) <= 0 ? 'bg-emerald-50/60 opacity-60' : ''"
               >
-                <td class="px-3 py-2 text-sm font-medium text-[var(--text-100)] sm:px-4">
-                  {{ it.producto_nombre }}
+                <td
+                  class="px-3 py-2 sm:px-4"
+                  :class="
+                    Number(it.cantidad_a_comprar) <= 0
+                      ? 'text-emerald-700'
+                      : 'text-[var(--text-100)]'
+                  "
+                >
+                  <span
+                    class="block text-sm font-medium"
+                    :class="
+                      Number(it.cantidad_a_comprar) <= 0
+                        ? 'line-through decoration-emerald-400/70'
+                        : ''
+                    "
+                    >{{ it.producto_nombre }}</span
+                  >
+                  <span
+                    class="block text-[11px]"
+                    :class="
+                      Number(it.cantidad_a_comprar) <= 0
+                        ? 'text-emerald-500'
+                        : 'text-[var(--text-200)]'
+                    "
+                    >{{ it.unidad_medida || '-' }}</span
+                  >
                 </td>
-                <td class="px-2 py-2 text-left text-xs text-[var(--text-200)] sm:px-3 sm:text-sm">
-                  {{ it.unidad_medida || '-' }}
-                </td>
-                <td class="px-2 py-2 text-right text-xs text-[var(--text-200)] sm:px-3 sm:text-sm">
+                <td
+                  class="px-2 py-2 text-right text-xs sm:px-3 sm:text-sm"
+                  :class="
+                    Number(it.cantidad_a_comprar) <= 0
+                      ? 'text-emerald-600'
+                      : 'text-[var(--text-200)]'
+                  "
+                >
                   {{ formatNum(it.cantidad_objetivo) }}
                 </td>
-                <td class="px-2 py-2 text-right text-xs text-[var(--text-200)] sm:px-3 sm:text-sm">
+                <td
+                  class="px-2 py-2 text-right text-xs sm:px-3 sm:text-sm"
+                  :class="
+                    Number(it.cantidad_a_comprar) <= 0
+                      ? 'text-emerald-600'
+                      : 'text-[var(--text-200)]'
+                  "
+                >
                   {{ formatNum(it.cantidad_actual) }}
                 </td>
                 <td class="px-3 py-2 text-right sm:px-4">
                   <span
-                    class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700 sm:px-2.5 sm:py-1 sm:text-sm"
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold sm:px-2.5 sm:py-1 sm:text-sm"
+                    :class="
+                      Number(it.cantidad_a_comprar) <= 0
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : colorBadgeComprar(it.cantidad_actual, it.cantidad_objetivo)
+                    "
                   >
-                    {{ formatNum(it.cantidad_a_comprar) }}
+                    {{
+                      Number(it.cantidad_a_comprar) <= 0 ? '✓' : formatNum(it.cantidad_a_comprar)
+                    }}
                   </span>
                 </td>
               </tr>
@@ -452,6 +632,28 @@ const formatNum = (n: number | string | null | undefined) => {
             </span>
           </p>
         </div>
+        <!-- Subheader con botón urgente -->
+        <div
+          class="flex items-center justify-between border-b border-rose-100 bg-rose-50/50 px-3 py-2 sm:px-4"
+        >
+          <span class="text-[11px] text-[var(--text-200)]"
+            >{{ itemsTotalAgregado.length }} ítem{{
+              itemsTotalAgregado.length !== 1 ? 's' : ''
+            }}</span
+          >
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors"
+            :class="
+              ordenUrgenteTotal
+                ? 'border-red-300 bg-red-600 text-white'
+                : 'border-rose-200 bg-white text-rose-600 hover:bg-red-50 hover:text-red-700'
+            "
+            @click="ordenUrgenteTotal = !ordenUrgenteTotal"
+          >
+            ⚠️ {{ ordenUrgenteTotal ? 'Orden: urgentes primero' : 'Ver urgentes primero' }}
+          </button>
+        </div>
         <table class="w-full">
           <thead>
             <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
@@ -461,34 +663,54 @@ const formatNum = (n: number | string | null | undefined) => {
                 Producto
               </th>
               <th
-                class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
-              >
-                Unidad
-              </th>
-              <th
                 class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
               >
-                A comprar
+                Comprá
               </th>
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="(it, idx) in itemsTotalAgregado"
+              v-for="(it, idx) in itemsTotalOrdenados"
               :key="`agg-${it.producto_id}-${idx}`"
-              class="border-b border-[var(--bg-200)] last:border-0"
+              class="border-b border-[var(--bg-200)] last:border-0 transition-colors"
+              :class="Number(it.cantidad_a_comprar) <= 0 ? 'bg-emerald-50/60 opacity-60' : ''"
             >
-              <td class="px-3 py-2 text-sm font-medium text-[var(--text-100)] sm:px-4">
-                {{ it.producto_nombre }}
-              </td>
-              <td class="px-2 py-2 text-left text-xs text-[var(--text-200)] sm:px-3 sm:text-sm">
-                {{ it.unidad_medida || '-' }}
+              <td
+                class="px-3 py-2 sm:px-4"
+                :class="
+                  Number(it.cantidad_a_comprar) <= 0 ? 'text-emerald-700' : 'text-[var(--text-100)]'
+                "
+              >
+                <span
+                  class="block text-sm font-medium"
+                  :class="
+                    Number(it.cantidad_a_comprar) <= 0
+                      ? 'line-through decoration-emerald-400/70'
+                      : ''
+                  "
+                  >{{ it.producto_nombre }}</span
+                >
+                <span
+                  class="block text-[11px]"
+                  :class="
+                    Number(it.cantidad_a_comprar) <= 0
+                      ? 'text-emerald-500'
+                      : 'text-[var(--text-200)]'
+                  "
+                  >{{ it.unidad_medida || '-' }}</span
+                >
               </td>
               <td class="px-3 py-2 text-right sm:px-4">
                 <span
-                  class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-sm font-bold text-rose-700"
+                  class="inline-flex items-center rounded-full px-2.5 py-1 text-sm font-bold"
+                  :class="
+                    Number(it.cantidad_a_comprar) <= 0
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-rose-100 text-rose-700'
+                  "
                 >
-                  {{ formatNum(it.cantidad_a_comprar) }}
+                  {{ Number(it.cantidad_a_comprar) <= 0 ? '✓' : formatNum(it.cantidad_a_comprar) }}
                 </span>
               </td>
             </tr>
@@ -503,10 +725,24 @@ const formatNum = (n: number | string | null | undefined) => {
       class="rounded-2xl border border-dashed border-[var(--bg-300)] bg-white p-8 text-center"
     >
       <ShoppingCart :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
-      <p class="font-semibold text-[var(--text-100)]">No hay datos para esta fecha</p>
-      <p class="mt-1 text-sm text-[var(--text-200)]">
-        No se encontraron conteos finalizados para los criterios seleccionados.
+      <p class="font-semibold text-[var(--text-100)]">
+        No hay conteos finalizados para el {{ fechaFormateada }}
+        <template v-if="localId != null">
+          en
+          <span class="text-rose-600">{{ locales.find((l) => l.id === localId)?.nombre }}</span>
+        </template>
       </p>
+      <p class="mt-1 text-sm text-[var(--text-200)]">
+        Finalizá un conteo para ese día y volvé a consultar.
+      </p>
+      <button
+        type="button"
+        class="mt-4 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700"
+        @click="router.push({ name: 'conteos' })"
+      >
+        <ArrowRight :size="14" />
+        Ir a conteos
+      </button>
     </div>
 
     <!-- Estado inicial -->

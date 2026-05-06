@@ -441,7 +441,6 @@ const estadoClass = (estado?: string) => {
                 </button>
                 <!-- Asistido -->
                 <button
-                  v-if="c.estado !== 'finalizado'"
                   type="button"
                   @click="abrirWizard(c)"
                   class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 text-white shadow-sm transition-colors hover:bg-indigo-600 sm:h-9 sm:w-auto sm:gap-1.5 sm:px-3"

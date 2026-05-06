@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, Clipboard, ShoppingCart } from 'lucide-vue-next'
+import { ArrowLeft, Clipboard, ExternalLink, ShoppingCart } from 'lucide-vue-next'
 import BaseButton from '@/components/BaseButton.vue'
 import { useNotification } from '@/composables/useNotification'
 
@@ -13,6 +13,8 @@ type ItemNarrado = {
   producto_nombre: string
   unidad_medida: string
   cantidad_a_comprar: number
+  cantidad_actual?: number
+  cantidad_objetivo?: number
 }
 
 type ListaSnapshot = {
@@ -25,7 +27,7 @@ type ListaSnapshot = {
 
 const snapshot = ref<ListaSnapshot | null>(null)
 const cargando = ref(false)
-const comprados = ref<Set<number>>(new Set())
+const ordenUrgente = ref(false)
 
 onMounted(async () => {
   cargando.value = true
@@ -44,20 +46,54 @@ onMounted(async () => {
 })
 
 const itemsNarrados = computed(() => snapshot.value?.items ?? [])
-const totalComprados = computed(
-  () => itemsNarrados.value.filter((it) => comprados.value.has(it.producto_id)).length,
+
+const tieneDetalle = computed(() => itemsNarrados.value.some((it) => it.cantidad_objetivo != null))
+
+const urgenciaPct = (it: ItemNarrado) => {
+  const actual = Number(it.cantidad_actual) || 0
+  const objetivo = Number(it.cantidad_objetivo) || 0
+  return objetivo > 0 ? actual / objetivo : 0
+}
+
+const itemsOrdenados = computed(() => {
+  const sorted = [...itemsNarrados.value]
+  if (ordenUrgente.value) {
+    if (tieneDetalle.value) {
+      sorted.sort((a, b) => urgenciaPct(a) - urgenciaPct(b))
+    } else {
+      sorted.sort(
+        (a, b) => (Number(b.cantidad_a_comprar) || 0) - (Number(a.cantidad_a_comprar) || 0),
+      )
+    }
+  }
+  return sorted
+})
+
+const totalAComprar = computed(
+  () => itemsNarrados.value.filter((it) => (Number(it.cantidad_a_comprar) || 0) > 0).length,
 )
 
-const formatCantidad = (n: number) => {
-  if (Number.isInteger(n)) return String(n)
-  return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+const colorBadge = (it: ItemNarrado) => {
+  const comprar = Number(it.cantidad_a_comprar) || 0
+  if (comprar <= 0) return 'bg-emerald-100 text-emerald-700'
+  if (!tieneDetalle.value) return 'bg-rose-100 text-rose-700'
+  const pct = urgenciaPct(it)
+  if (pct >= 0.75) return 'bg-yellow-100 text-yellow-800'
+  if (pct >= 0.3) return 'bg-orange-200 text-orange-800'
+  return 'bg-red-200 text-red-800'
+}
+
+const formatNum = (n: number | string | null | undefined) => {
+  if (n === null || n === undefined || n === '') return '-'
+  const num = typeof n === 'number' ? n : Number(n)
+  if (Number.isNaN(num)) return String(n)
+  return num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
 const fechaTitulo = computed(() => {
   if (!snapshot.value?.fecha) return '-'
   const d = new Date(`${snapshot.value.fecha}T00:00:00`)
   if (Number.isNaN(d.getTime())) return snapshot.value.fecha
-
   const meses = [
     'enero',
     'febrero',
@@ -78,28 +114,18 @@ const fechaTitulo = computed(() => {
 const textoParaCopiar = computed(() => {
   const encabezado = `${fechaTitulo.value}, esto es lo que debes comprar:`
   const alcance = `Negocio(s): ${snapshot.value?.localNombre ?? 'Todos los negocios'}`
-
-  if (itemsNarrados.value.length === 0) {
-    return `${encabezado}\n${alcance}\n\nNo hay productos para comprar.`
-  }
-
-  const lineas = itemsNarrados.value.map(
+  const items = itemsNarrados.value.filter((it) => (Number(it.cantidad_a_comprar) || 0) > 0)
+  if (items.length === 0) return `${encabezado}\n${alcance}\n\nNo hay productos para comprar.`
+  const lineas = items.map(
     (it) =>
-      `- ${formatCantidad(it.cantidad_a_comprar)} ${it.unidad_medida || 'unidades'} de ${it.producto_nombre}`,
+      `- ${formatNum(it.cantidad_a_comprar)} ${it.unidad_medida || 'unidades'} de ${it.producto_nombre}`,
   )
   return `${encabezado}\n${alcance}\n\n${lineas.join('\n')}`
 })
 
-const volver = () => {
-  router.push({ name: 'compras' })
-}
+const volver = () => router.push({ name: 'compras' })
 
-const toggleComprado = (productoId: number) => {
-  const next = new Set(comprados.value)
-  if (next.has(productoId)) next.delete(productoId)
-  else next.add(productoId)
-  comprados.value = next
-}
+const irAComprasNegocio = () => router.push({ name: 'compras' })
 
 const copiarLista = async () => {
   try {
@@ -113,6 +139,7 @@ const copiarLista = async () => {
 
 <template>
   <div class="space-y-4">
+    <!-- Header -->
     <div
       class="flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 px-4 py-4 shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5"
     >
@@ -124,39 +151,65 @@ const copiarLista = async () => {
         </div>
         <div>
           <h1 class="text-lg font-bold text-white sm:text-2xl">Lista de compra completa</h1>
-          <p class="text-xs text-white/90 sm:text-sm">Formato natural para compartir o copiar</p>
+          <p class="text-xs text-white/90 sm:text-sm">{{ fechaTitulo }}</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
         <BaseButton variant="secondary" class="!bg-white !text-rose-700" @click="volver">
-          <span class="inline-flex items-center gap-2">
-            <ArrowLeft :size="16" />
-            Volver
-          </span>
+          <span class="inline-flex items-center gap-2"><ArrowLeft :size="16" />Volver</span>
         </BaseButton>
         <BaseButton variant="secondary" class="!bg-white !text-rose-700" @click="copiarLista">
-          <span class="inline-flex items-center gap-2">
-            <Clipboard :size="16" />
-            Copiar lista
-          </span>
+          <span class="inline-flex items-center gap-2"><Clipboard :size="16" />Copiar lista</span>
         </BaseButton>
       </div>
     </div>
 
-    <div class="rounded-2xl border border-[var(--bg-300)]/50 bg-white p-5 shadow-sm sm:p-6">
-      <p class="text-lg font-bold text-[var(--text-100)] sm:text-xl">{{ fechaTitulo }}</p>
-      <p class="mt-1 text-sm text-[var(--text-200)]">
-        Esto es lo que debes comprar para
-        <span class="font-semibold text-[var(--text-100)]">{{
-          snapshot?.localNombre || 'todos los negocios'
-        }}</span
-        >:
-      </p>
-
+    <!-- Tabla -->
+    <div class="overflow-hidden rounded-2xl border border-[var(--bg-300)]/50 bg-white shadow-sm">
+      <!-- Cabecera de la tarjeta -->
       <div
-        v-if="cargando"
-        class="mt-4 space-y-2 rounded-2xl border border-[var(--bg-300)] bg-white p-4"
+        class="flex items-center justify-between gap-2 border-b border-[var(--bg-200)] px-4 py-3"
       >
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-300)] bg-[var(--bg-100)] px-2.5 py-1 text-xs font-semibold text-[var(--text-100)] transition-colors hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200"
+            title="Ver en pantalla de compras"
+            @click="irAComprasNegocio"
+          >
+            <ExternalLink :size="12" />
+            {{ snapshot?.localNombre || 'Todos los negocios' }}
+          </button>
+          <span class="text-xs text-[var(--text-200)]">
+            {{ totalAComprar }} ítem{{ totalAComprar !== 1 ? 's' : '' }} a comprar
+          </span>
+        </div>
+        <span class="text-xs text-[var(--text-200)]">{{ fechaTitulo }}</span>
+      </div>
+
+      <!-- Subheader urgente -->
+      <div
+        class="flex items-center justify-between border-b border-[var(--bg-200)] bg-[var(--bg-100)]/60 px-4 py-2"
+      >
+        <span class="text-[11px] text-[var(--text-200)]"
+          >{{ itemsNarrados.length }} ítem{{ itemsNarrados.length !== 1 ? 's' : '' }} en total</span
+        >
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors"
+          :class="
+            ordenUrgente
+              ? 'border-red-300 bg-red-600 text-white'
+              : 'border-[var(--bg-300)] bg-white text-[var(--text-200)] hover:bg-red-50 hover:text-red-700'
+          "
+          @click="ordenUrgente = !ordenUrgente"
+        >
+          ⚠️ {{ ordenUrgente ? 'Orden: urgentes primero' : 'Ver urgentes primero' }}
+        </button>
+      </div>
+
+      <!-- Skeleton -->
+      <div v-if="cargando" class="space-y-2 p-4">
         <div
           v-for="n in 5"
           :key="`sk-${n}`"
@@ -164,67 +217,114 @@ const copiarLista = async () => {
         ></div>
       </div>
 
+      <!-- Vacío -->
       <div
         v-else-if="itemsNarrados.length === 0"
-        class="mt-4 rounded-xl bg-[var(--bg-100)] p-4 text-sm text-[var(--text-200)]"
+        class="px-4 py-8 text-center text-sm text-[var(--text-200)]"
       >
-        No hay productos para comprar con los filtros seleccionados.
+        No hay productos para esta lista.
       </div>
 
-      <div
-        v-else
-        class="mt-4 rounded-2xl border border-[#ddd3bf] bg-[#fffdf6] p-4 shadow-sm sm:p-5 libreta-bg"
-      >
-        <div
-          class="mb-3 flex flex-wrap items-center justify-end gap-2 border-b border-dashed border-[#d6ccb7] pb-2"
-        >
-          <p class="text-xs font-medium text-[#7b725f]">
-            Marcados: {{ totalComprados }} / {{ itemsNarrados.length }}
-          </p>
-        </div>
-
-        <ul class="space-y-1.5">
-          <li
-            v-for="it in itemsNarrados"
-            :key="`item-${it.producto_id}`"
-            class="flex items-start gap-2 rounded-md px-1.5 py-1 checklist-line"
-          >
-            <input
-              type="checkbox"
-              class="mt-1 h-4 w-4 shrink-0 accent-emerald-600"
-              :checked="comprados.has(it.producto_id)"
-              @change="toggleComprado(it.producto_id)"
-            />
-            <p
-              class="text-sm leading-relaxed text-[#3f3a2f] sm:text-base"
-              :class="{ 'line-through opacity-60': comprados.has(it.producto_id) }"
+      <!-- Tabla -->
+      <table v-else class="w-full">
+        <thead>
+          <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
+            <th
+              class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
             >
-              {{ formatCantidad(it.cantidad_a_comprar) }} {{ it.unidad_medida || 'unidades' }} de
-              <span class="font-semibold">{{ it.producto_nombre }}</span>
-            </p>
-          </li>
-        </ul>
-
-        <p class="mt-3 text-[11px] text-[#8a7f68]">
-          Las marcas de comprado son temporales y no se guardan.
-        </p>
-      </div>
+              Producto
+            </th>
+            <template v-if="tieneDetalle">
+              <th
+                class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
+                title="Cantidad objetivo según plantilla"
+              >
+                Necesitás
+              </th>
+              <th
+                class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
+                title="Cantidad actual en stock según conteo"
+              >
+                Tenés
+              </th>
+            </template>
+            <th
+              class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
+            >
+              Comprá
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="it in itemsOrdenados"
+            :key="`item-${it.producto_id}`"
+            class="border-b border-[var(--bg-200)] last:border-0 transition-colors"
+            :class="(Number(it.cantidad_a_comprar) || 0) <= 0 ? 'bg-emerald-50/60 opacity-60' : ''"
+          >
+            <td
+              class="px-3 py-2 sm:px-4"
+              :class="
+                (Number(it.cantidad_a_comprar) || 0) <= 0
+                  ? 'text-emerald-700'
+                  : 'text-[var(--text-100)]'
+              "
+            >
+              <span
+                class="block text-sm font-medium"
+                :class="
+                  (Number(it.cantidad_a_comprar) || 0) <= 0
+                    ? 'line-through decoration-emerald-400/70'
+                    : ''
+                "
+                >{{ it.producto_nombre }}</span
+              >
+              <span
+                class="block text-[11px]"
+                :class="
+                  (Number(it.cantidad_a_comprar) || 0) <= 0
+                    ? 'text-emerald-500'
+                    : 'text-[var(--text-200)]'
+                "
+              >
+                {{ it.unidad_medida || '-' }}
+              </span>
+            </td>
+            <template v-if="tieneDetalle">
+              <td
+                class="px-2 py-2 text-right text-xs sm:px-3 sm:text-sm"
+                :class="
+                  (Number(it.cantidad_a_comprar) || 0) <= 0
+                    ? 'text-emerald-600'
+                    : 'text-[var(--text-200)]'
+                "
+              >
+                {{ formatNum(it.cantidad_objetivo) }}
+              </td>
+              <td
+                class="px-2 py-2 text-right text-xs sm:px-3 sm:text-sm"
+                :class="
+                  (Number(it.cantidad_a_comprar) || 0) <= 0
+                    ? 'text-emerald-600'
+                    : 'text-[var(--text-200)]'
+                "
+              >
+                {{ formatNum(it.cantidad_actual) }}
+              </td>
+            </template>
+            <td class="px-3 py-2 text-right sm:px-4">
+              <span
+                class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold sm:px-2.5 sm:py-1 sm:text-sm"
+                :class="colorBadge(it)"
+              >
+                {{
+                  (Number(it.cantidad_a_comprar) || 0) <= 0 ? '✓' : formatNum(it.cantidad_a_comprar)
+                }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
-
-<style scoped>
-.libreta-bg {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    rgba(89, 75, 55, 0.08) 0,
-    rgba(89, 75, 55, 0.08) 1px,
-    transparent 1px,
-    transparent 34px
-  );
-}
-
-.checklist-line {
-  background-color: rgba(255, 255, 255, 0.56);
-}
-</style>

@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, CheckCircle2, ListChecks, Lock, RotateCcw, Save, ZapOff } from 'lucide-vue-next'
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  ListChecks,
+  Lock,
+  RotateCcw,
+  Save,
+  ZapOff,
+} from 'lucide-vue-next'
 import {
   conteostockApiActualizarItem,
   conteostockApiCrearItem,
@@ -45,6 +54,13 @@ const productoFocusado = ref<number | null>(null)
 let blurTimer: ReturnType<typeof setTimeout> | null = null
 
 const showWizard = ref(false)
+const soloFaltantes = ref(false)
+
+const itemsFiltrados = computed(() =>
+  soloFaltantes.value
+    ? plantillaItems.value.filter((p) => !yaContado(p.producto_id))
+    : plantillaItems.value,
+)
 
 const QUICK_VALUES = [0, 0.5, 1, 2, 5, 10]
 
@@ -150,7 +166,7 @@ const cargar = async () => {
     const nuevasCantidades: Record<number, string> = {}
     for (const item of itemsExistentes.value) {
       if (item.producto != null && item.cantidad_conteada != null) {
-        nuevasCantidades[item.producto] = String(item.cantidad_conteada)
+        nuevasCantidades[item.producto] = String(parseFloat(String(item.cantidad_conteada)))
       }
     }
     cantidades.value = nuevasCantidades
@@ -163,6 +179,7 @@ const cargar = async () => {
 
 const guardarItem = async (productoId: number): Promise<void> => {
   if (!conteo.value?.id || esSoloLectura.value) return
+  if (guardando.value.has(productoId)) return
 
   const valorStr = cantidades.value[productoId]
   if (valorStr === '' || valorStr == null) return
@@ -205,16 +222,34 @@ const guardarItem = async (productoId: number): Promise<void> => {
   }
 }
 
-const onFocus = (productoId: number) => {
+const footerInputActivo = ref(false)
+const footerInputRef = ref<HTMLInputElement | null>(null)
+
+const seleccionarProducto = (productoId: number) => {
+  if (esSoloLectura.value) return
   if (blurTimer) {
     clearTimeout(blurTimer)
     blurTimer = null
   }
   productoFocusado.value = productoId
+  nextTick(() => {
+    footerInputRef.value?.focus()
+    footerInputRef.value?.select()
+    scrollToProducto(productoId)
+  })
 }
 
-const onBlur = (productoId: number) => {
-  guardarItem(productoId)
+const onFooterInputFocus = () => {
+  if (blurTimer) {
+    clearTimeout(blurTimer)
+    blurTimer = null
+  }
+  footerInputActivo.value = true
+}
+
+const onFooterInputBlur = () => {
+  footerInputActivo.value = false
+  if (productoFocusado.value != null) guardarItem(productoFocusado.value)
   blurTimer = setTimeout(() => {
     productoFocusado.value = null
     blurTimer = null
@@ -225,13 +260,12 @@ onUnmounted(() => {
   if (blurTimer) clearTimeout(blurTimer)
 })
 
-const onEnter = (productoId: number, idx: number) => {
-  guardarItem(productoId)
-  const nextId = plantillaItems.value[idx + 1]?.producto_id
-  if (nextId != null) {
-    productoFocusado.value = nextId
-    nextTick(() => document.getElementById(`input-producto-${nextId}`)?.focus())
-  }
+const scrollToProducto = (productoId: number) => {
+  nextTick(() => {
+    document
+      .getElementById(`row-producto-${productoId}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
 }
 
 const aplicarQuick = (val: number) => {
@@ -239,11 +273,21 @@ const aplicarQuick = (val: number) => {
   const id = productoFocusado.value
   cantidades.value[id] = String(val)
   guardarItem(id)
-  const idx = plantillaItems.value.findIndex((p) => p.producto_id === id)
-  const siguiente = plantillaItems.value.slice(idx + 1).find((p) => !yaContado(p.producto_id))
+  scrollToProducto(id)
+  const idx = itemsFiltrados.value.findIndex((p) => p.producto_id === id)
+  const siguiente = itemsFiltrados.value.slice(idx + 1).find((p) => !yaContado(p.producto_id))
   if (siguiente) {
-    productoFocusado.value = siguiente.producto_id
-    nextTick(() => document.getElementById(`input-producto-${siguiente.producto_id}`)?.focus())
+    seleccionarProducto(siguiente.producto_id)
+  }
+}
+
+const irAlSiguiente = () => {
+  if (productoFocusado.value == null) return
+  guardarItem(productoFocusado.value)
+  const idx = itemsFiltrados.value.findIndex((p) => p.producto_id === productoFocusado.value)
+  const siguiente = itemsFiltrados.value.slice(idx + 1).find((p) => !yaContado(p.producto_id))
+  if (siguiente) {
+    seleccionarProducto(siguiente.producto_id)
   }
 }
 
@@ -386,16 +430,31 @@ onMounted(cargar)
             <CheckCircle2 :size="13" /> ¡Todos contados! Ya podés finalizar.
           </p>
         </div>
-        <button
-          v-if="!esSoloLectura && faltantes > 0"
-          type="button"
-          :disabled="rellenando"
-          @click="rellenarConCero"
-          class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--bg-300)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--text-100)] shadow-sm transition-colors hover:bg-[var(--bg-100)] disabled:opacity-50"
-        >
-          <ZapOff :size="13" class="text-amber-500" />
-          Poner {{ faltantes }} faltante{{ faltantes !== 1 ? 's' : '' }} en 0
-        </button>
+        <div class="flex shrink-0 gap-2">
+          <button
+            v-if="faltantes > 0"
+            type="button"
+            @click="soloFaltantes = !soloFaltantes"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors"
+            :class="
+              soloFaltantes
+                ? 'border-orange-500 bg-orange-500 text-white'
+                : 'border-[var(--bg-300)] bg-white text-[var(--text-100)] hover:bg-[var(--bg-100)]'
+            "
+          >
+            Solo faltantes ({{ faltantes }})
+          </button>
+          <button
+            v-if="!esSoloLectura && faltantes > 0"
+            type="button"
+            :disabled="rellenando"
+            @click="rellenarConCero"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--bg-300)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--text-100)] shadow-sm transition-colors hover:bg-[var(--bg-100)] disabled:opacity-50"
+          >
+            <ZapOff :size="13" class="text-amber-500" />
+            Poner {{ faltantes }} en 0
+          </button>
+        </div>
       </div>
 
       <!-- Sin plantilla -->
@@ -417,16 +476,35 @@ onMounted(cargar)
         v-else
         class="overflow-hidden rounded-2xl border border-[var(--bg-300)]/50 bg-white shadow-sm"
       >
+        <!-- Cabecera -->
         <div
-          v-for="(p, idx) in plantillaItems"
+          class="flex items-center gap-2 border-b border-[var(--bg-200)] bg-[var(--bg-100)]/60 px-3 py-1.5"
+        >
+          <span class="w-6 shrink-0"></span>
+          <span
+            class="flex-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)]"
+            >Producto</span
+          >
+          <span
+            class="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)]"
+            >Cuánto hay</span
+          >
+        </div>
+        <div
+          v-for="(p, idx) in itemsFiltrados"
           :key="p.id ?? p.producto_id"
-          class="flex items-center gap-2 border-b border-[var(--bg-200)] px-3 py-2 last:border-0 transition-colors"
+          :id="`row-producto-${p.producto_id}`"
+          class="flex items-center gap-2 border-b border-[var(--bg-200)] px-3 py-2.5 last:border-0 transition-colors select-none"
           :class="[
             yaContado(p.producto_id) ? 'bg-emerald-50/60' : 'bg-white',
             productoFocusado === p.producto_id && !esSoloLectura
               ? 'ring-2 ring-inset ring-teal-400/60'
               : '',
+            !esSoloLectura
+              ? 'cursor-pointer hover:bg-[var(--bg-100)]/60 active:bg-[var(--bg-200)]/40'
+              : '',
           ]"
+          @click="seleccionarProducto(p.producto_id)"
         >
           <!-- Indicador -->
           <span
@@ -454,31 +532,19 @@ onMounted(cargar)
             </span>
           </div>
 
-          <!-- Input cantidad -->
-          <div class="relative shrink-0">
-            <input
-              :id="`input-producto-${p.producto_id}`"
-              v-model="cantidades[p.producto_id]"
-              type="number"
-              step="0.01"
-              min="0"
-              :disabled="esSoloLectura || guardando.has(p.producto_id)"
-              placeholder="—"
-              class="w-20 rounded-lg border py-1.5 pl-2 pr-6 text-right text-sm font-bold text-[var(--text-100)] transition-colors focus:outline-none focus:ring-2 sm:w-24"
-              :class="[
-                yaContado(p.producto_id)
-                  ? 'border-emerald-300 bg-emerald-50 focus:border-emerald-400 focus:ring-emerald-400/30'
-                  : 'border-[var(--bg-300)] bg-white focus:border-teal-500 focus:ring-teal-500/30',
-                esSoloLectura || guardando.has(p.producto_id) ? 'opacity-60' : '',
-              ]"
-              @focus="onFocus(p.producto_id)"
-              @blur="onBlur(p.producto_id)"
-              @keyup.enter="onEnter(p.producto_id, idx)"
-            />
+          <!-- Valor actual -->
+          <div class="relative flex shrink-0 items-center gap-1">
             <span
-              v-if="guardando.has(p.producto_id)"
-              class="pointer-events-none absolute inset-y-0 right-1.5 flex items-center"
+              class="min-w-[3rem] rounded-lg border px-2.5 py-1.5 text-right text-sm font-bold"
+              :class="
+                yaContado(p.producto_id)
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-[var(--bg-300)] bg-[var(--bg-100)] text-[var(--text-200)]'
+              "
             >
+              {{ cantidades[p.producto_id] ?? '—' }}
+            </span>
+            <span v-if="guardando.has(p.producto_id)" class="flex items-center">
               <Save :size="11" class="animate-pulse text-teal-500" />
             </span>
           </div>
@@ -529,6 +595,28 @@ onMounted(cargar)
                 "
               >
                 {{ labelQuick(val) }}
+              </button>
+            </div>
+            <!-- Input manual + siguiente -->
+            <div class="mt-2 flex gap-1.5">
+              <input
+                v-model="cantidades[productoFocusado]"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Otro valor…"
+                class="flex-1 rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2 text-sm font-bold text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                ref="footerInputRef"
+                @focus="onFooterInputFocus"
+                @blur="onFooterInputBlur"
+                @keyup.enter="irAlSiguiente"
+              />
+              <button
+                type="button"
+                @mousedown.prevent="irAlSiguiente"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-teal-500 bg-teal-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-teal-600"
+              >
+                <ArrowRight :size="16" />
               </button>
             </div>
           </div>
