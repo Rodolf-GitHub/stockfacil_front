@@ -1,41 +1,25 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import {
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  ListChecks,
-  Lock,
-  Pencil,
-  Plus,
-  RotateCcw,
-  Trash2,
-  X,
-} from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { ClipboardList, ListChecks, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-vue-next'
 import {
   conteostockApiActualizarConteo,
-  conteostockApiActualizarItem,
   conteostockApiCrearConteo,
-  conteostockApiCrearItem,
   conteostockApiEliminarConteo,
-  conteostockApiFinalizarConteo,
   conteostockApiListarConteos,
-  conteostockApiListarItems,
   conteostockApiReabrirConteo,
 } from '@/apps/conteos_stock/api'
-import type { ConteoStockSchema, ItemConteoStockSchema } from '@/apps/conteos_stock/api/schemas'
-import { plantillastockApiListarPlantillas } from '@/apps/plantillas_stock/api'
-import type { PlantillaStockSchema } from '@/apps/plantillas_stock/api/schemas'
+import type { ConteoStockSchema } from '@/apps/conteos_stock/api/schemas'
 import { localApiListarLocales } from '@/apps/locales/api'
 import type { LocalSchema } from '@/apps/locales/api/schemas'
-import { productoApiListarProductos } from '@/apps/productos/api'
-import type { ProductoSchema } from '@/apps/productos/api/schemas'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import BasePagination from '@/components/BasePagination.vue'
 import { useNotification } from '@/composables/useNotification'
 import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
+import ConteoAsistidoModal from '@/apps/conteos_stock/components/ConteoAsistidoModal.vue'
 
+const router = useRouter()
 const { success, error: notifyError } = useNotification()
 
 const LIMIT = 100
@@ -48,7 +32,6 @@ const fechaFiltro = ref<string>('')
 const cargando = ref(false)
 
 const locales = ref<LocalSchema[]>([])
-const productos = ref<ProductoSchema[]>([])
 
 // Crear conteo
 const showCrearModal = ref(false)
@@ -69,16 +52,6 @@ const eliminando = ref(false)
 // Wizard
 const showWizard = ref(false)
 const conteoDetalle = ref<ConteoStockSchema | null>(null)
-const plantillaItems = ref<PlantillaStockSchema[]>([])
-const itemsExistentes = ref<ItemConteoStockSchema[]>([])
-const cargandoWizard = ref(false)
-const stepIdx = ref(0)
-const cantidadActual = ref<string | number>('')
-const guardandoPaso = ref(false)
-
-const esCantidadVacia = (v: string | number) =>
-  v === '' || v === null || v === undefined || (typeof v === 'number' && Number.isNaN(v))
-const finalizando = ref(false)
 const reabriendo = ref(false)
 
 const authOptions = (): RequestInit => ({
@@ -120,18 +93,6 @@ const cargarLocales = async () => {
   }
 }
 
-const cargarProductos = async () => {
-  try {
-    const res = await productoApiListarProductos({ limit: 1000, offset: 0 }, {
-      ...authOptions(),
-      fetch: fetchWithBaseUrl,
-    } as RequestInit)
-    if (res.status >= 200 && res.status < 300) productos.value = res.data.items
-  } catch {
-    /* */
-  }
-}
-
 watch([localFiltro, fechaFiltro], () => {
   offset.value = 0
   cargar()
@@ -141,28 +102,9 @@ watch(offset, cargar)
 onMounted(() => {
   cargar()
   cargarLocales()
-  cargarProductos()
 })
 
 const localNombre = (id: number) => locales.value.find((l) => l.id === id)?.nombre ?? `#${id}`
-const productoNombre = (id: number) => productos.value.find((p) => p.id === id)?.nombre ?? `#${id}`
-const productoUnidad = (id: number) => productos.value.find((p) => p.id === id)?.unidad_medida ?? ''
-
-const unidadPlural = (unidad: string | null | undefined) => {
-  const u = (unidad || '').trim().toLowerCase()
-  if (!u || u === 'otros') return ''
-  const map: Record<string, string> = {
-    kg: 'kilogramos',
-    unidades: 'unidades',
-    litros: 'litros',
-    atados: 'atados',
-    cajas: 'cajas',
-    sacos: 'sacos',
-    bandejas: 'bandejas',
-    planchas: 'planchas',
-  }
-  return map[u] ?? u
-}
 
 const fechaHoyLocal = () => {
   const d = new Date()
@@ -194,10 +136,11 @@ const crearConteo = async () => {
     if (res.status >= 200 && res.status < 300) {
       success('Conteo creado')
       showCrearModal.value = false
-      await cargar()
       const nuevo = res.data
       if (nuevo?.id) {
-        await abrirWizard(nuevo)
+        router.push({ name: 'conteo-detalle', params: { id: nuevo.id } })
+      } else {
+        await cargar()
       }
     }
   } catch {
@@ -257,180 +200,20 @@ const confirmarEliminar = async () => {
   }
 }
 
-// --- Wizard guiado ---
-const abrirWizard = async (c: ConteoStockSchema) => {
+const abrirWizard = (c: ConteoStockSchema) => {
   conteoDetalle.value = c
-  stepIdx.value = 0
-  plantillaItems.value = []
-  itemsExistentes.value = []
-  cantidadActual.value = ''
   showWizard.value = true
-  cargandoWizard.value = true
-  try {
-    const [resPlant, resItems] = await Promise.all([
-      plantillastockApiListarPlantillas({ local_id: c.local, limit: 1000, offset: 0 }, {
-        ...authOptions(),
-        fetch: fetchWithBaseUrl,
-      } as RequestInit),
-      c.id
-        ? conteostockApiListarItems(c.id, {
-            ...authOptions(),
-            fetch: fetchWithBaseUrl,
-          } as RequestInit)
-        : Promise.resolve(null),
-    ])
-    if (resPlant.status >= 200 && resPlant.status < 300) {
-      plantillaItems.value = resPlant.data.items
-    }
-    if (resItems && resItems.status >= 200 && resItems.status < 300) {
-      itemsExistentes.value = resItems.data
-    }
-    const primerSinContar = plantillaItems.value.findIndex(
-      (p) => !itemsExistentes.value.some((it) => it.producto === p.producto_id),
-    )
-    stepIdx.value = primerSinContar >= 0 ? primerSinContar : 0
-    sincronizarInput()
-  } catch {
-    notifyError('Error al cargar la plantilla del local')
-  } finally {
-    cargandoWizard.value = false
-  }
 }
 
-const stepActual = computed<PlantillaStockSchema | null>(
-  () => plantillaItems.value[stepIdx.value] ?? null,
-)
-const totalSteps = computed(() => plantillaItems.value.length)
-const itemActual = computed<ItemConteoStockSchema | null>(() => {
-  if (!stepActual.value) return null
-  return itemsExistentes.value.find((it) => it.producto === stepActual.value!.producto_id) ?? null
-})
-const itemsContados = computed(() => itemsExistentes.value.length)
-const progresoPct = computed(() => {
-  if (totalSteps.value === 0) return 0
-  return Math.round((itemsContados.value / totalSteps.value) * 100)
-})
-const todosContados = computed(
-  () => totalSteps.value > 0 && itemsContados.value >= totalSteps.value,
-)
-const esSoloLectura = computed(() => conteoDetalle.value?.estado === 'finalizado')
-
-const sincronizarInput = () => {
-  const v = itemActual.value?.cantidad_conteada
-  cantidadActual.value = v != null && v !== '' ? Number(v) : ''
-}
-
-const cantidadVacia = computed(() => esCantidadVacia(cantidadActual.value))
-
-watch(stepIdx, sincronizarInput)
-
-const guardarPaso = async (): Promise<boolean> => {
-  if (!conteoDetalle.value?.id || !stepActual.value || esSoloLectura.value) return true
-  if (cantidadVacia.value) {
-    notifyError('Ingresá una cantidad')
-    return false
-  }
-  const cant = Number(cantidadActual.value)
-  if (Number.isNaN(cant) || cant < 0) {
-    notifyError('Cantidad inválida')
-    return false
-  }
-  const existente = itemActual.value
-  if (existente && Number(existente.cantidad_conteada) === cant) {
-    return true
-  }
-  guardandoPaso.value = true
-  try {
-    if (existente?.id) {
-      const res = await conteostockApiActualizarItem(
-        existente.id,
-        { cantidad_conteada: cant },
-        authOptions(),
-      )
-      if (res.status >= 200 && res.status < 300) {
-        existente.cantidad_conteada = String(cant)
-        return true
-      }
-    } else {
-      const res = await conteostockApiCrearItem(
-        {
-          conteo_stock_id: conteoDetalle.value.id,
-          producto_id: stepActual.value.producto_id,
-          cantidad_conteada: cant,
-        },
-        authOptions(),
-      )
-      if (res.status >= 200 && res.status < 300) {
-        itemsExistentes.value.push(res.data)
-        return true
-      }
-    }
-    notifyError('No se pudo guardar')
-    return false
-  } catch {
-    notifyError('Error al guardar')
-    return false
-  } finally {
-    guardandoPaso.value = false
-  }
-}
-
-const irSiguiente = async () => {
-  const ok = await guardarPaso()
-  if (!ok) return
-  if (stepIdx.value < totalSteps.value - 1) {
-    stepIdx.value++
-  }
-}
-
-const irAnterior = async () => {
-  if (!cantidadVacia.value && !esSoloLectura.value) {
-    await guardarPaso()
-  }
-  if (stepIdx.value > 0) {
-    stepIdx.value--
-  }
-}
-
-const irAlPaso = async (idx: number) => {
-  if (idx === stepIdx.value) return
-  if (!cantidadVacia.value && !esSoloLectura.value) {
-    await guardarPaso()
-  }
-  stepIdx.value = idx
-}
-
-const finalizarConteo = async () => {
-  if (!conteoDetalle.value?.id) return
-  if (!cantidadVacia.value && !esSoloLectura.value) {
-    const ok = await guardarPaso()
-    if (!ok) return
-  }
-  if (!todosContados.value) {
-    notifyError('Faltan productos por contar')
-    return
-  }
-  finalizando.value = true
-  try {
-    const res = await conteostockApiFinalizarConteo(conteoDetalle.value.id, authOptions())
-    if (res.status >= 200 && res.status < 300) {
-      success('Conteo finalizado')
-      conteoDetalle.value.estado = 'finalizado'
-      showWizard.value = false
-      await cargar()
-    }
-  } catch {
-    notifyError('Error al finalizar el conteo')
-  } finally {
-    finalizando.value = false
-  }
-}
-
-const cerrarWizard = async () => {
-  if (!cantidadVacia.value && !esSoloLectura.value && stepActual.value) {
-    await guardarPaso()
-  }
+const onWizardFinalizado = async (conteo: ConteoStockSchema) => {
+  if (conteoDetalle.value?.id === conteo.id) conteoDetalle.value.estado = conteo.estado
   showWizard.value = false
+  await cargar()
+}
+
+const onWizardReabierto = async (conteo: ConteoStockSchema) => {
+  if (conteoDetalle.value?.id === conteo.id) conteoDetalle.value.estado = conteo.estado
+  await cargar()
 }
 
 const reabrirConteo = async (c: ConteoStockSchema) => {
@@ -633,44 +416,59 @@ const estadoClass = (estado?: string) => {
               </span>
             </td>
             <td class="whitespace-nowrap px-3 py-2.5 sm:px-4 sm:py-3">
-              <div class="flex justify-end gap-1.5">
+              <div class="flex justify-end gap-1">
+                <!-- Contar / Ver -->
                 <button
                   type="button"
-                  @click="abrirWizard(c)"
-                  class="inline-flex h-9 items-center gap-1 rounded-lg bg-teal-600 px-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 sm:h-10 sm:gap-1.5 sm:px-3 sm:text-sm"
-                  :title="c.estado === 'finalizado' ? 'Ver conteo' : 'Continuar conteo'"
+                  @click="router.push({ name: 'conteo-detalle', params: { id: c.id } })"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600 text-white shadow-sm transition-colors hover:bg-teal-700 sm:h-9 sm:w-auto sm:gap-1.5 sm:px-3"
+                  :title="c.estado === 'finalizado' ? 'Ver conteo' : 'Ir a contar'"
                 >
-                  <ListChecks :size="16" />
-                  <span class="hidden sm:inline">{{
+                  <ClipboardList :size="15" />
+                  <span class="hidden text-xs font-semibold sm:inline">{{
                     c.estado === 'finalizado' ? 'Ver' : 'Contar'
                   }}</span>
                 </button>
+                <!-- Asistido -->
+                <button
+                  v-if="c.estado !== 'finalizado'"
+                  type="button"
+                  @click="abrirWizard(c)"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 text-white shadow-sm transition-colors hover:bg-indigo-600 sm:h-9 sm:w-auto sm:gap-1.5 sm:px-3"
+                  title="Conteo asistido (paso a paso)"
+                >
+                  <ListChecks :size="15" />
+                  <span class="hidden text-xs font-semibold sm:inline">Asistido</span>
+                </button>
+                <!-- Editar fecha -->
                 <button
                   v-if="c.estado !== 'finalizado'"
                   type="button"
                   @click="abrirEditar(c)"
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-10 sm:w-10"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 sm:h-9 sm:w-9"
                   title="Editar fecha"
                 >
-                  <Pencil :size="16" />
+                  <Pencil :size="14" />
                 </button>
+                <!-- Reabrir -->
                 <button
                   v-if="c.estado === 'finalizado'"
                   type="button"
                   @click="reabrirConteo(c)"
                   :disabled="reabriendo"
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50 sm:h-10 sm:w-10"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50 sm:h-9 sm:w-9"
                   title="Reabrir conteo"
                 >
-                  <RotateCcw :size="16" />
+                  <RotateCcw :size="14" />
                 </button>
+                <!-- Eliminar -->
                 <button
                   type="button"
                   @click="abrirEliminar(c)"
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-10 sm:w-10"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm transition-colors hover:bg-red-600 sm:h-9 sm:w-9"
                   title="Eliminar"
                 >
-                  <Trash2 :size="16" />
+                  <Trash2 :size="14" />
                 </button>
               </div>
             </td>
@@ -781,218 +579,15 @@ const estadoClass = (estado?: string) => {
     </template>
   </BaseModal>
 
-  <!-- Wizard guiado -->
-  <BaseModal
+  <!-- Wizard asistido -->
+  <ConteoAsistidoModal
+    v-if="conteoDetalle"
     :show="showWizard"
-    :title="esSoloLectura ? 'Detalle del conteo' : 'Conteo guiado'"
-    size="lg"
-    @close="cerrarWizard"
-  >
-    <div v-if="conteoDetalle" class="space-y-4 sm:space-y-5">
-      <div
-        class="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--bg-100)] p-2.5 text-xs sm:gap-3 sm:p-3 sm:text-sm"
-      >
-        <span class="font-semibold text-[var(--text-100)]">{{
-          localNombre(conteoDetalle.local)
-        }}</span>
-        <span class="text-[var(--text-200)]">·</span>
-        <span class="text-[var(--text-200)]">{{ formatFecha(conteoDetalle.fecha) }}</span>
-        <span class="text-[var(--text-200)]">·</span>
-        <span
-          class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize"
-          :class="estadoClass(conteoDetalle.estado)"
-        >
-          {{ conteoDetalle.estado || 'abierto' }}
-        </span>
-      </div>
+    :conteo="conteoDetalle"
+    :local-nombre="localNombre(conteoDetalle.local)"
+    @close="showWizard = false"
+    @finalizado="onWizardFinalizado"
+    @reabierto="onWizardReabierto"
+  />
 
-      <div v-if="cargandoWizard" class="py-12 text-center text-sm text-[var(--text-200)]">
-        Cargando plantilla...
-      </div>
-
-      <div
-        v-else-if="totalSteps === 0"
-        class="rounded-xl border border-dashed border-[var(--bg-300)] p-8 text-center"
-      >
-        <ListChecks :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
-        <p class="font-semibold text-[var(--text-100)]">
-          Este local no tiene plantilla configurada
-        </p>
-        <p class="mt-1 text-sm text-[var(--text-200)]">
-          Agregá productos a la plantilla del local para poder hacer conteos.
-        </p>
-      </div>
-
-      <template v-else>
-        <div>
-          <div class="mb-2 flex items-center justify-between text-sm">
-            <span class="font-medium text-[var(--text-100)]"
-              >Producto {{ stepIdx + 1 }} de {{ totalSteps }}</span
-            >
-            <span class="text-[var(--text-200)]"
-              >{{ itemsContados }} / {{ totalSteps }} contados ({{ progresoPct }}%)</span
-            >
-          </div>
-          <div class="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-200)]">
-            <div
-              class="h-full bg-teal-500 transition-all"
-              :style="{ width: `${progresoPct}%` }"
-            ></div>
-          </div>
-        </div>
-
-        <div
-          v-if="stepActual"
-          class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-4 sm:p-6"
-        >
-          <p class="text-[10px] font-semibold uppercase tracking-wider text-teal-600 sm:text-xs">
-            Pregunta
-          </p>
-          <h3 class="mt-1 text-lg font-bold leading-snug text-[var(--text-100)] sm:text-2xl">
-            ¿Cuántos
-            <span class="text-teal-700">
-              {{
-                unidadPlural(
-                  stepActual.producto_unidad_medida || productoUnidad(stepActual.producto_id),
-                ) || 'unidades'
-              }}
-            </span>
-            de
-            <span class="text-teal-700">
-              {{
-                (stepActual.producto_nombre || productoNombre(stepActual.producto_id)).toLowerCase()
-              }}
-            </span>
-            tienes actualmente en el local
-            <span class="text-teal-700">{{ localNombre(conteoDetalle.local) }}</span
-            >?
-          </h3>
-
-          <div class="mt-4 sm:mt-5">
-            <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">
-              Tu respuesta <span v-if="!esSoloLectura" class="text-red-500">*</span>
-            </label>
-            <div class="flex items-stretch gap-2">
-              <input
-                v-model="cantidadActual"
-                type="number"
-                step="0.01"
-                min="0"
-                :disabled="esSoloLectura"
-                placeholder="0"
-                class="min-w-0 flex-1 rounded-lg border border-[var(--bg-300)] bg-white px-3 py-2.5 text-base font-semibold text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 disabled:bg-[var(--bg-100)] sm:px-4 sm:py-3 sm:text-lg"
-                @keyup.enter="irSiguiente"
-              />
-              <span
-                class="inline-flex shrink-0 max-w-[40%] items-center justify-center truncate rounded-lg bg-[var(--bg-100)] px-2.5 text-xs font-medium text-[var(--text-200)] sm:max-w-none sm:px-4 sm:text-sm"
-              >
-                {{
-                  unidadPlural(
-                    stepActual.producto_unidad_medida || productoUnidad(stepActual.producto_id),
-                  ) ||
-                  stepActual.producto_unidad_medida ||
-                  productoUnidad(stepActual.producto_id) ||
-                  '—'
-                }}
-              </span>
-            </div>
-            <p v-if="itemActual" class="mt-2 text-xs text-emerald-600">
-              ✓ Ya contado anteriormente: {{ itemActual.cantidad_conteada }}
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-200)]">
-            Saltar a producto
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            <button
-              v-for="(p, idx) in plantillaItems"
-              :key="p.id ?? idx"
-              type="button"
-              @click="irAlPaso(idx)"
-              :title="p.producto_nombre || productoNombre(p.producto_id)"
-              :class="[
-                'inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-semibold transition-colors',
-                idx === stepIdx
-                  ? 'border-teal-600 bg-teal-600 text-white'
-                  : productoYaContado(p.producto_id)
-                    ? 'border-emerald-300 bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                    : 'border-[var(--bg-300)] bg-white text-[var(--text-200)] hover:bg-[var(--bg-100)]',
-              ]"
-            >
-              {{ idx + 1 }}
-            </button>
-          </div>
-        </div>
-      </template>
-    </div>
-
-    <template #footer>
-      <div
-        class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3"
-      >
-        <BaseButton variant="secondary" class="w-full sm:w-auto" @click="cerrarWizard">
-          {{ esSoloLectura ? 'Cerrar' : 'Guardar y cerrar' }}
-        </BaseButton>
-
-        <template v-if="totalSteps > 0 && !esSoloLectura">
-          <div class="grid grid-cols-2 gap-2 sm:contents">
-            <BaseButton
-              variant="secondary"
-              class="w-full sm:w-auto"
-              :disabled="stepIdx === 0"
-              @click="irAnterior"
-            >
-              <ArrowLeft :size="16" />
-              Anterior
-            </BaseButton>
-
-            <BaseButton
-              v-if="stepIdx < totalSteps - 1"
-              class="w-full sm:w-auto"
-              :loading="guardandoPaso"
-              :disabled="cantidadVacia"
-              @click="irSiguiente"
-            >
-              Siguiente
-              <ArrowRight :size="16" />
-            </BaseButton>
-          </div>
-
-          <BaseButton
-            v-if="todosContados || stepIdx === totalSteps - 1"
-            variant="success"
-            class="w-full sm:w-auto"
-            :loading="finalizando || guardandoPaso"
-            @click="finalizarConteo"
-          >
-            <CheckCircle2 :size="16" />
-            Finalizar conteo
-          </BaseButton>
-        </template>
-
-        <span
-          v-else-if="esSoloLectura && conteoDetalle"
-          class="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center"
-        >
-          <span
-            class="inline-flex items-center justify-center gap-1 text-sm text-[var(--text-200)]"
-          >
-            <Lock :size="14" /> Conteo finalizado
-          </span>
-          <BaseButton
-            variant="secondary"
-            class="w-full sm:w-auto"
-            :loading="reabriendo"
-            @click="reabrirConteo(conteoDetalle)"
-          >
-            <RotateCcw :size="16" />
-            Reabrir
-          </BaseButton>
-        </span>
-      </div>
-    </template>
-  </BaseModal>
 </template>

@@ -8,6 +8,7 @@ import AsignacionesPage from '@/apps/locales/pages/AsignacionesPage.vue'
 import UsuariosPage from '@/apps/usuarios/pages/UsuariosPage.vue'
 import PlantillasStockPage from '@/apps/plantillas_stock/pages/PlantillasStockPage.vue'
 import ConteosStockPage from '@/apps/conteos_stock/pages/ConteosStockPage.vue'
+import ConteoDetallePage from '@/apps/conteos_stock/pages/ConteoDetallePage.vue'
 import ListaCompraPage from '@/apps/conteos_stock/pages/ListaCompraPage.vue'
 import ListaCompraCompletaPage from '@/apps/conteos_stock/pages/ListaCompraCompletaPage.vue'
 import AyudaPage from '@/apps/ayuda/pages/AyudaPage.vue'
@@ -59,6 +60,11 @@ const router = createRouter({
           path: '/conteos',
           name: 'conteos',
           component: ConteosStockPage,
+        },
+        {
+          path: '/conteos/:id',
+          name: 'conteo-detalle',
+          component: ConteoDetallePage,
         },
         {
           path: '/compras',
