@@ -273,19 +273,9 @@ onUnmounted(() => {
 
 const scrollToProducto = (productoId: number) => {
   nextTick(() => {
-    const el = document.getElementById(`row-producto-${productoId}`)
-    if (!el) return
-    const vv = window.visualViewport
-    // Altura visible real (sin el teclado)
-    const visibleHeight = vv ? vv.height : window.innerHeight
-    const rect = el.getBoundingClientRect()
-    // Centro del área visible encima del teclado
-    const targetCenter = visibleHeight / 2
-    const elCenter = rect.top + rect.height / 2
-    const diff = elCenter - targetCenter
-    if (Math.abs(diff) > 10) {
-      window.scrollBy({ top: diff, behavior: 'smooth' })
-    }
+    document
+      .getElementById(`row-producto-${productoId}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   })
 }
 
