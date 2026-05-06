@@ -245,6 +245,11 @@ const onFooterInputFocus = () => {
     blurTimer = null
   }
   footerInputActivo.value = true
+  // En móvil el teclado tarda ~300ms en aparecer y reducir el viewport;
+  // esperamos a que termine para hacer scroll y que el panel quede visible.
+  setTimeout(() => {
+    footerInputRef.value?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, 350)
 }
 
 const onFooterInputBlur = () => {
