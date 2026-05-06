@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ClipboardList, ListChecks, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-vue-next'
+import { ClipboardList, ListChecks, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-vue-next'
 import {
   conteostockApiActualizarConteo,
   conteostockApiCrearConteo,
@@ -24,11 +24,34 @@ const { success, error: notifyError } = useNotification()
 
 const LIMIT = 100
 
+const fechaHoyLocal = () => {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dia}`
+}
+
+const fechaOffset = (dias: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() - dias)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dia}`
+}
+
+const FILTROS_FECHA = [
+  { label: 'Hoy', value: () => fechaOffset(0) },
+  { label: 'Ayer', value: () => fechaOffset(1) },
+  { label: 'Antier', value: () => fechaOffset(2) },
+]
+
 const conteos = ref<ConteoStockSchema[]>([])
 const total = ref(0)
 const offset = ref(0)
 const localFiltro = ref<number | null>(null)
-const fechaFiltro = ref<string>('')
+const fechaFiltro = ref<string>(fechaHoyLocal())
 const cargando = ref(false)
 
 const locales = ref<LocalSchema[]>([])
@@ -106,17 +129,9 @@ onMounted(() => {
 
 const localNombre = (id: number) => locales.value.find((l) => l.id === id)?.nombre ?? `#${id}`
 
-const fechaHoyLocal = () => {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dia = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dia}`
-}
-
 const abrirCrear = () => {
   crearForm.value = {
-    local_id: localFiltro.value,
+    local_id: locales.value.length === 1 ? (locales.value[0]?.id ?? null) : localFiltro.value,
     fecha: fechaHoyLocal(),
   }
   showCrearModal.value = true
@@ -206,13 +221,15 @@ const abrirWizard = (c: ConteoStockSchema) => {
 }
 
 const onWizardFinalizado = async (conteo: ConteoStockSchema) => {
-  if (conteoDetalle.value?.id === conteo.id) conteoDetalle.value.estado = conteo.estado
+  if (conteoDetalle.value?.id === conteo.id && conteoDetalle.value)
+    conteoDetalle.value.estado = conteo.estado
   showWizard.value = false
   await cargar()
 }
 
 const onWizardReabierto = async (conteo: ConteoStockSchema) => {
-  if (conteoDetalle.value?.id === conteo.id) conteoDetalle.value.estado = conteo.estado
+  if (conteoDetalle.value?.id === conteo.id && conteoDetalle.value)
+    conteoDetalle.value.estado = conteo.estado
   await cargar()
 }
 
@@ -234,9 +251,6 @@ const reabrirConteo = async (c: ConteoStockSchema) => {
     reabriendo.value = false
   }
 }
-
-const productoYaContado = (productoId: number) =>
-  itemsExistentes.value.some((it) => it.producto === productoId)
 
 const formatFecha = (f?: string) => {
   if (!f) return '-'
@@ -306,33 +320,42 @@ const estadoClass = (estado?: string) => {
     </div>
 
     <div class="rounded-2xl border border-[var(--bg-300)]/50 bg-white shadow-sm">
-      <div class="grid gap-3 border-b border-[var(--bg-200)] p-3 sm:grid-cols-[1fr_200px] sm:p-4">
+      <div
+        class="flex flex-col gap-3 border-b border-[var(--bg-200)] p-3 sm:flex-row sm:items-center sm:p-4"
+      >
         <select
           v-model="localFiltro"
-          class="rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+          class="flex-1 rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2.5 text-sm text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
         >
           <option :value="null">Todos los locales</option>
           <option v-for="l in locales" :key="l.id ?? l.nombre" :value="l.id">
             {{ l.nombre }}
           </option>
         </select>
-        <div class="flex flex-col gap-1">
-          <div class="flex items-center justify-between px-0.5">
-            <span class="text-xs font-medium text-[var(--text-200)]">Fecha</span>
-            <button
-              v-if="fechaFiltro"
-              type="button"
-              @click="fechaFiltro = ''"
-              class="flex items-center gap-1 text-xs font-medium text-teal-600 hover:text-teal-800"
-            >
-              <X :size="11" /> Todas las fechas
-            </button>
-            <span v-else class="text-xs text-[var(--text-200)]">Todas las fechas</span>
-          </div>
+        <div class="flex shrink-0 flex-wrap gap-1">
+          <button
+            v-for="f in FILTROS_FECHA"
+            :key="f.label"
+            type="button"
+            @click="fechaFiltro = f.value()"
+            class="rounded-lg border px-3 py-2 text-sm font-semibold transition-colors"
+            :class="
+              fechaFiltro === f.value()
+                ? 'border-teal-500 bg-teal-500 text-white'
+                : 'border-[var(--bg-300)] bg-white text-[var(--text-100)] hover:border-teal-400 hover:bg-teal-50'
+            "
+          >
+            {{ f.label }}
+          </button>
           <input
             v-model="fechaFiltro"
             type="date"
-            class="w-full rounded-xl border border-[var(--bg-300)] bg-white px-3 py-2 text-sm text-[var(--text-100)] focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+            class="rounded-lg border px-2 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+            :class="
+              FILTROS_FECHA.every((f) => fechaFiltro !== f.value())
+                ? 'border-teal-500 bg-teal-50 text-teal-700 font-semibold'
+                : 'border-[var(--bg-300)] bg-white text-[var(--text-100)]'
+            "
           />
         </div>
       </div>
@@ -345,11 +368,6 @@ const estadoClass = (estado?: string) => {
               class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
             >
               Local
-            </th>
-            <th
-              class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Fecha
             </th>
             <th
               class="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
@@ -370,9 +388,6 @@ const estadoClass = (estado?: string) => {
                 <div class="h-5 w-2/3 animate-pulse rounded bg-[var(--bg-200)]"></div>
               </td>
               <td class="px-2 py-3 sm:px-4">
-                <div class="h-5 w-20 animate-pulse rounded bg-[var(--bg-200)]"></div>
-              </td>
-              <td class="px-2 py-3 sm:px-4">
                 <div class="h-5 w-16 animate-pulse rounded bg-[var(--bg-200)]"></div>
               </td>
               <td class="px-3 py-3 sm:px-4">
@@ -382,7 +397,7 @@ const estadoClass = (estado?: string) => {
           </template>
 
           <tr v-else-if="conteos.length === 0">
-            <td colspan="4" class="px-4 py-12 text-center">
+            <td colspan="3" class="px-4 py-12 text-center">
               <ListChecks :size="36" class="mx-auto mb-3 text-[var(--bg-300)]" />
               <p class="font-semibold text-[var(--text-100)]">No hay conteos</p>
               <p class="mt-1 text-sm text-[var(--text-200)]">
@@ -401,11 +416,6 @@ const estadoClass = (estado?: string) => {
               class="w-full max-w-0 px-3 py-2.5 text-sm font-semibold text-[var(--text-100)] sm:px-4 sm:py-3"
             >
               <span class="block truncate">{{ localNombre(c.local) }}</span>
-            </td>
-            <td
-              class="whitespace-nowrap px-2 py-2.5 text-xs text-[var(--text-200)] sm:px-4 sm:py-3 sm:text-sm"
-            >
-              {{ formatFechaTabla(c.fecha) }}
             </td>
             <td class="whitespace-nowrap px-2 py-2.5 sm:px-4 sm:py-3">
               <span
@@ -504,9 +514,14 @@ const estadoClass = (estado?: string) => {
   </div>
 
   <!-- Modal crear -->
-  <BaseModal :show="showCrearModal" title="Nuevo conteo" size="sm" @close="showCrearModal = false">
+  <BaseModal
+    :show="showCrearModal"
+    :title="locales.length === 1 ? `Nuevo conteo · ${locales[0]?.nombre ?? ''}` : 'Nuevo conteo'"
+    size="sm"
+    @close="showCrearModal = false"
+  >
     <form class="space-y-4" @submit.prevent="crearConteo">
-      <div>
+      <div v-if="locales.length !== 1">
         <label class="mb-1 block text-sm font-medium text-[var(--text-100)]"
           >Local <span class="text-red-500">*</span></label
         >
@@ -519,7 +534,12 @@ const estadoClass = (estado?: string) => {
         </select>
       </div>
       <div>
-        <label class="mb-1 block text-sm font-medium text-[var(--text-100)]">Fecha</label>
+        <div class="mb-1 flex items-baseline justify-between">
+          <label class="text-sm font-medium text-[var(--text-100)]">Fecha</label>
+          <span v-if="crearForm.fecha === fechaHoyLocal()" class="text-xs font-medium text-teal-600"
+            >Hoy</span
+          >
+        </div>
         <input
           v-model="crearForm.fecha"
           type="date"
@@ -589,5 +609,4 @@ const estadoClass = (estado?: string) => {
     @finalizado="onWizardFinalizado"
     @reabierto="onWizardReabierto"
   />
-
 </template>
