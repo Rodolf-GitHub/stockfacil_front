@@ -27,6 +27,8 @@ const router = useRouter()
 const sidebarOpen = ref(false)
 const userMenuOpen = ref(false)
 
+const appVersion = __APP_VERSION__
+
 const userEmail = ref(localStorage.getItem('user_email') || 'Usuario')
 const esAdmin = ref(localStorage.getItem('es_admin') === 'true')
 
@@ -106,6 +108,9 @@ const cambiarPassword = async () => {
               <span
                 class="self-center whitespace-nowrap text-lg sm:text-xl font-bold text-white md:text-2xl"
                 >📦 StockFácil</span
+              >
+              <span class="ml-2 self-end pb-0.5 text-[10px] font-semibold text-white/60"
+                >v{{ appVersion }}</span
               >
             </RouterLink>
           </div>

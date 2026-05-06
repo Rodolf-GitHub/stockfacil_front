@@ -5,6 +5,7 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { version } from './package.json'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -14,6 +15,9 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
 
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(version),
+    },
     plugins: [
       vue(),
       vueDevTools(),
