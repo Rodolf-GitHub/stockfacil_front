@@ -53,6 +53,14 @@ const cantidades = ref<Record<number, string>>({})
 const productoFocusado = ref<number | null>(null)
 let blurTimer: ReturnType<typeof setTimeout> | null = null
 
+// Visual Viewport — para posicionar el panel encima del teclado en móvil
+const footerBottom = ref(0)
+const onViewportResize = () => {
+  const vv = window.visualViewport
+  if (!vv) return
+  footerBottom.value = window.innerHeight - vv.height - vv.offsetTop
+}
+
 const showWizard = ref(false)
 const soloFaltantes = ref(false)
 
@@ -245,11 +253,7 @@ const onFooterInputFocus = () => {
     blurTimer = null
   }
   footerInputActivo.value = true
-  // En móvil el teclado tarda ~300ms en aparecer y reducir el viewport;
-  // esperamos a que termine para hacer scroll y que el panel quede visible.
-  setTimeout(() => {
-    footerInputRef.value?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, 350)
+  // El panel es fixed; el visual viewport listener actualiza footerBottom automáticamente.
 }
 
 const onFooterInputBlur = () => {
@@ -263,6 +267,8 @@ const onFooterInputBlur = () => {
 
 onUnmounted(() => {
   if (blurTimer) clearTimeout(blurTimer)
+  window.visualViewport?.removeEventListener('resize', onViewportResize)
+  window.visualViewport?.removeEventListener('scroll', onViewportResize)
 })
 
 const scrollToProducto = (productoId: number) => {
@@ -351,11 +357,16 @@ const reabrirConteo = async () => {
 
 const labelQuick = (v: number) => (v === 0.5 ? '½' : String(v))
 
-onMounted(cargar)
+onMounted(() => {
+  cargar()
+  onViewportResize()
+  window.visualViewport?.addEventListener('resize', onViewportResize)
+  window.visualViewport?.addEventListener('scroll', onViewportResize)
+})
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-4 pb-40">
     <!-- Header -->
     <div
       class="flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-teal-600 to-teal-500 px-5 py-4 shadow-md sm:flex-row sm:items-center sm:justify-between"
@@ -556,7 +567,7 @@ onMounted(cargar)
         </div>
       </div>
 
-      <!-- Footer sticky: visible solo con foco, al 100%, o finalizado -->
+      <!-- Footer fijo: visible solo con foco, al 100%, o finalizado -->
       <Transition
         enter-active-class="transition-all duration-200 ease-out"
         enter-from-class="opacity-0 translate-y-2"
@@ -567,7 +578,8 @@ onMounted(cargar)
       >
         <div
           v-if="mostrarFooter"
-          class="sticky bottom-4 z-10 rounded-2xl border border-[var(--bg-300)]/60 bg-white/95 px-4 py-3 shadow-xl backdrop-blur"
+          class="fixed right-0 left-0 z-30 border-t border-[var(--bg-300)]/60 bg-white/98 px-4 py-3 shadow-2xl backdrop-blur"
+          :style="{ bottom: `${footerBottom}px` }"
         >
           <!-- Quick values: solo cuando hay un input enfocado -->
           <div
