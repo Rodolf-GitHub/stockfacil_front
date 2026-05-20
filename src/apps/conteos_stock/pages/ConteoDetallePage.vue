@@ -578,7 +578,7 @@ onMounted(() => {
       >
         <div
           v-if="mostrarFooter"
-          class="fixed right-0 left-0 z-30 border-t border-[var(--bg-300)]/60 bg-white/98 px-4 py-3 shadow-2xl backdrop-blur"
+          class="fixed right-0 left-0 z-30 border-t border-[var(--bg-300)]/60 bg-white/98 px-4 py-3 shadow-2xl backdrop-blur lg:left-64"
           :style="{ bottom: `${footerBottom}px` }"
         >
           <!-- Quick values: solo cuando hay un input enfocado -->
