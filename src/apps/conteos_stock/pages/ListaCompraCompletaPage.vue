@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, Clipboard, ExternalLink, ShoppingCart } from 'lucide-vue-next'
-import BaseButton from '@/components/BaseButton.vue'
+import { ArrowLeft, Clipboard, ShoppingCart } from 'lucide-vue-next'
+import { conteostockApiResumenPorFecha } from '@/apps/conteos_stock/api'
+import { localApiListarLocales } from '@/apps/locales/api'
+import type { LocalSchema } from '@/apps/locales/api/schemas'
 import { useNotification } from '@/composables/useNotification'
+import { fetchWithBaseUrl } from '@/utils/fetchWithBaseUrl'
 
 const router = useRouter()
 const { success, error: notifyError } = useNotification()
@@ -13,74 +16,181 @@ type ItemNarrado = {
   producto_nombre: string
   unidad_medida: string
   cantidad_a_comprar: number
-  cantidad_actual?: number
-  cantidad_objetivo?: number
 }
 
-type ListaSnapshot = {
-  fecha: string
-  localId: number | null
-  localNombre: string
-  items: ItemNarrado[]
-  localesSinConteo: string[]
-}
-
-const snapshot = ref<ListaSnapshot | null>(null)
+const locales = ref<LocalSchema[]>([])
+const localSeleccionado = ref<number | null>(null)
+const fechaSeleccionada = ref('')
+const items = ref<ItemNarrado[]>([])
 const cargando = ref(false)
-const ordenUrgente = ref(false)
+const marcados = ref<Set<number>>(new Set())
+// IDs en transición (marcados pero todavía visibles en pendientes durante 3s)
+const animando = ref<Set<number>>(new Set())
+const timers = new Map<number, ReturnType<typeof setTimeout>>()
 
-onMounted(async () => {
+const lsKey = () =>
+  `lista_compras_marcados_${fechaSeleccionada.value}_${localSeleccionado.value ?? 'todos'}`
+
+const LS_PREFIX = 'lista_compras_marcados_'
+const MAX_LS_ENTRIES = 5
+
+const guardarMarcados = () => {
+  if (!fechaSeleccionada.value) return
+  const key = lsKey()
+  localStorage.setItem(key, JSON.stringify([...marcados.value]))
+  // Mantener solo las últimas MAX_LS_ENTRIES entradas
+  const allKeys = Object.keys(localStorage)
+    .filter((k) => k.startsWith(LS_PREFIX))
+    .sort() // las claves contienen fecha YYYY-MM-DD → orden cronológico
+  if (allKeys.length > MAX_LS_ENTRIES) {
+    allKeys.slice(0, allKeys.length - MAX_LS_ENTRIES).forEach((k) => localStorage.removeItem(k))
+  }
+}
+
+const restaurarMarcados = () => {
+  try {
+    const raw = localStorage.getItem(lsKey())
+    marcados.value = raw ? new Set(JSON.parse(raw) as number[]) : new Set()
+  } catch {
+    marcados.value = new Set()
+  }
+}
+
+const authOptions = (): RequestInit => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+})
+
+const cargarLocales = async () => {
+  try {
+    const res = await localApiListarLocales({ limit: 1000, offset: 0 }, {
+      ...authOptions(),
+      fetch: fetchWithBaseUrl,
+    } as RequestInit)
+    if (res.status >= 200 && res.status < 300) locales.value = res.data.items
+  } catch {
+    /* */
+  }
+}
+
+const cargarLista = async () => {
+  if (!fechaSeleccionada.value) return
+  // Cancelar timers pendientes al cambiar filtros
+  for (const t of timers.values()) clearTimeout(t)
+  timers.clear()
+  animando.value = new Set()
   cargando.value = true
   try {
-    const raw = sessionStorage.getItem('compras_lista_snapshot')
-    if (!raw) {
-      notifyError('No hay datos para mostrar. Volvé a la pantalla de compras.')
-      return
+    const res = await conteostockApiResumenPorFecha(
+      { fecha: fechaSeleccionada.value, local_id: localSeleccionado.value ?? undefined },
+      { ...authOptions(), fetch: fetchWithBaseUrl } as RequestInit,
+    )
+    if (res.status >= 200 && res.status < 300) {
+      const data = res.data as any
+      const localesData: any[] = Array.isArray(data) ? data : (data.locales ?? [])
+      const itemsMap = new Map<number, ItemNarrado>()
+      for (const loc of localesData) {
+        for (const it of loc.items ?? []) {
+          const comprar = Number(it.cantidad_a_comprar) || 0
+          if (comprar <= 0) continue
+          const existing = itemsMap.get(it.producto_id)
+          if (existing) {
+            existing.cantidad_a_comprar += comprar
+          } else {
+            itemsMap.set(it.producto_id, {
+              producto_id: it.producto_id,
+              producto_nombre: it.producto_nombre ?? `#${it.producto_id}`,
+              unidad_medida: it.unidad_medida ?? '',
+              cantidad_a_comprar: comprar,
+            })
+          }
+        }
+      }
+      items.value = [...itemsMap.values()]
+      restaurarMarcados()
     }
-    snapshot.value = JSON.parse(raw) as ListaSnapshot
   } catch {
-    notifyError('No se pudo leer la lista de compras')
+    notifyError('Error al cargar la lista')
   } finally {
     cargando.value = false
   }
-})
-
-const itemsNarrados = computed(() => snapshot.value?.items ?? [])
-
-const tieneDetalle = computed(() => itemsNarrados.value.some((it) => it.cantidad_objetivo != null))
-
-const urgenciaPct = (it: ItemNarrado) => {
-  const actual = Number(it.cantidad_actual) || 0
-  const objetivo = Number(it.cantidad_objetivo) || 0
-  return objetivo > 0 ? actual / objetivo : 0
 }
 
-const itemsOrdenados = computed(() => {
-  const sorted = [...itemsNarrados.value]
-  if (ordenUrgente.value) {
-    if (tieneDetalle.value) {
-      sorted.sort((a, b) => urgenciaPct(a) - urgenciaPct(b))
-    } else {
-      sorted.sort(
-        (a, b) => (Number(b.cantidad_a_comprar) || 0) - (Number(a.cantidad_a_comprar) || 0),
+onMounted(async () => {
+  await cargarLocales()
+  try {
+    const raw = sessionStorage.getItem('compras_lista_snapshot')
+    if (raw) {
+      const parsed = JSON.parse(raw) as any
+      fechaSeleccionada.value = parsed.fecha ?? ''
+      localSeleccionado.value = parsed.localId ?? null
+      items.value = (parsed.items ?? []).filter(
+        (it: any) => (Number(it.cantidad_a_comprar) || 0) > 0,
       )
+      restaurarMarcados()
+      return
     }
+  } catch {
+    /* */
   }
-  return sorted
+  const d = new Date()
+  fechaSeleccionada.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  await cargarLista()
 })
 
-const totalAComprar = computed(
-  () => itemsNarrados.value.filter((it) => (Number(it.cantidad_a_comprar) || 0) > 0).length,
+onUnmounted(() => {
+  for (const t of timers.values()) clearTimeout(t)
+  timers.clear()
+})
+
+watch([localSeleccionado, fechaSeleccionada], cargarLista)
+watch(marcados, guardarMarcados, { deep: true })
+
+const itemsOrdenados = computed(() =>
+  [...items.value].sort((a, b) => a.producto_nombre.localeCompare(b.producto_nombre, 'es')),
 )
 
-const colorBadge = (it: ItemNarrado) => {
-  const comprar = Number(it.cantidad_a_comprar) || 0
-  if (comprar <= 0) return 'bg-emerald-100 text-emerald-700'
-  if (!tieneDetalle.value) return 'bg-rose-100 text-rose-700'
-  const pct = urgenciaPct(it)
-  if (pct >= 0.75) return 'bg-yellow-100 text-yellow-800'
-  if (pct >= 0.3) return 'bg-orange-200 text-orange-800'
-  return 'bg-red-200 text-red-800'
+// Pendientes: ni marcados ni animando (animando sigue mostrándose en la lista con visual especial)
+const pendientes = computed(() =>
+  itemsOrdenados.value.filter((it) => !marcados.value.has(it.producto_id)),
+)
+const comprados = computed(() =>
+  itemsOrdenados.value.filter((it) => marcados.value.has(it.producto_id)),
+)
+const porComprar = computed(
+  () => pendientes.value.filter((it) => !animando.value.has(it.producto_id)).length,
+)
+
+const toggleMarcado = (id: number) => {
+  // Si ya está en comprados → desmarcar directamente
+  if (marcados.value.has(id)) {
+    const next = new Set(marcados.value)
+    next.delete(id)
+    marcados.value = next
+    return
+  }
+  // Si está animando → cancelar y desmarcar
+  if (animando.value.has(id)) {
+    clearTimeout(timers.get(id))
+    timers.delete(id)
+    const next = new Set(animando.value)
+    next.delete(id)
+    animando.value = next
+    return
+  }
+  // Iniciar animación de 3s
+  const a = new Set(animando.value)
+  a.add(id)
+  animando.value = a
+  const timer = setTimeout(() => {
+    const a2 = new Set(animando.value)
+    a2.delete(id)
+    animando.value = a2
+    const m = new Set(marcados.value)
+    m.add(id)
+    marcados.value = m
+    timers.delete(id)
+  }, 3000)
+  timers.set(id, timer)
 }
 
 const formatNum = (n: number | string | null | undefined) => {
@@ -91,9 +201,9 @@ const formatNum = (n: number | string | null | undefined) => {
 }
 
 const fechaTitulo = computed(() => {
-  if (!snapshot.value?.fecha) return '-'
-  const d = new Date(`${snapshot.value.fecha}T00:00:00`)
-  if (Number.isNaN(d.getTime())) return snapshot.value.fecha
+  if (!fechaSeleccionada.value) return '-'
+  const d = new Date(`${fechaSeleccionada.value}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return fechaSeleccionada.value
   const meses = [
     'enero',
     'febrero',
@@ -111,21 +221,19 @@ const fechaTitulo = computed(() => {
   return `${d.getDate()} de ${meses[d.getMonth()]}`
 })
 
+const nombreLocal = computed(() =>
+  localSeleccionado.value
+    ? (locales.value.find((l) => l.id === localSeleccionado.value)?.nombre ?? '')
+    : 'todos los negocios',
+)
+
 const textoParaCopiar = computed(() => {
-  const encabezado = `${fechaTitulo.value}, esto es lo que debes comprar:`
-  const alcance = `Negocio(s): ${snapshot.value?.localNombre ?? 'Todos los negocios'}`
-  const items = itemsNarrados.value.filter((it) => (Number(it.cantidad_a_comprar) || 0) > 0)
-  if (items.length === 0) return `${encabezado}\n${alcance}\n\nNo hay productos para comprar.`
-  const lineas = items.map(
+  const lineas = itemsOrdenados.value.map(
     (it) =>
-      `- ${formatNum(it.cantidad_a_comprar)} ${it.unidad_medida || 'unidades'} de ${it.producto_nombre}`,
+      `- ${formatNum(it.cantidad_a_comprar)} ${it.unidad_medida || 'u.'} de ${it.producto_nombre}`,
   )
-  return `${encabezado}\n${alcance}\n\n${lineas.join('\n')}`
+  return `Compras para ${nombreLocal.value} — ${fechaTitulo.value}:\n\n${lineas.join('\n')}`
 })
-
-const volver = () => router.push({ name: 'compras' })
-
-const irAComprasNegocio = () => router.push({ name: 'compras' })
 
 const copiarLista = async () => {
   try {
@@ -135,11 +243,30 @@ const copiarLista = async () => {
     notifyError('No se pudo copiar la lista')
   }
 }
+
+const volver = () => router.push({ name: 'compras' })
+
+// ── Fechas rápidas ──────────────────────────────────────────
+const isoDate = (d: Date) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+const fechaConOffset = (dias: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() + dias)
+  return isoDate(d)
+}
+const setFechaRapida = (dias: number) => {
+  fechaSeleccionada.value = fechaConOffset(dias)
+}
+const esFechaRapida = (dias: number) => fechaSeleccionada.value === fechaConOffset(dias)
 </script>
 
 <template>
-  <div class="space-y-4">
-    <!-- Header -->
+  <div class="space-y-4 px-2 pb-10 sm:px-4">
+    <!-- Encabezado estilo app -->
     <div
       class="flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 px-4 py-4 shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5"
     >
@@ -150,181 +277,221 @@ const copiarLista = async () => {
           <ShoppingCart :size="20" class="text-white" />
         </div>
         <div>
-          <h1 class="text-lg font-bold text-white sm:text-2xl">Lista de compra completa</h1>
-          <p class="text-xs text-white/90 sm:text-sm">{{ fechaTitulo }}</p>
+          <h1 class="text-lg font-bold text-white sm:text-2xl">Lista de compras</h1>
+          <p class="text-xs text-white/80 sm:text-sm">{{ nombreLocal }} — {{ fechaTitulo }}</p>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <BaseButton variant="secondary" class="!bg-white !text-rose-700" @click="volver">
-          <span class="inline-flex items-center gap-2"><ArrowLeft :size="16" />Volver</span>
-        </BaseButton>
-        <BaseButton variant="secondary" class="!bg-white !text-rose-700" @click="copiarLista">
-          <span class="inline-flex items-center gap-2"><Clipboard :size="16" />Copiar lista</span>
-        </BaseButton>
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          @click="volver"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-white/20"
+        >
+          <ArrowLeft :size="15" /> Volver
+        </button>
+        <button
+          type="button"
+          @click="copiarLista"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-white/20"
+        >
+          <Clipboard :size="15" /> Copiar lista
+        </button>
       </div>
     </div>
 
-    <!-- Tabla -->
-    <div class="overflow-hidden rounded-2xl border border-[var(--bg-300)]/50 bg-white shadow-sm">
-      <!-- Cabecera de la tarjeta -->
-      <div
-        class="flex items-center justify-between gap-2 border-b border-[var(--bg-200)] px-4 py-3"
-      >
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            class="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-300)] bg-[var(--bg-100)] px-2.5 py-1 text-xs font-semibold text-[var(--text-100)] transition-colors hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200"
-            title="Ver en pantalla de compras"
-            @click="irAComprasNegocio"
-          >
-            <ExternalLink :size="12" />
-            {{ snapshot?.localNombre || 'Todos los negocios' }}
-          </button>
-          <span class="text-xs text-[var(--text-200)]">
-            {{ totalAComprar }} ítem{{ totalAComprar !== 1 ? 's' : '' }} a comprar
-          </span>
-        </div>
-        <span class="text-xs text-[var(--text-200)]">{{ fechaTitulo }}</span>
-      </div>
-
-      <!-- Subheader urgente -->
-      <div
-        class="flex items-center justify-between border-b border-[var(--bg-200)] bg-[var(--bg-100)]/60 px-4 py-2"
-      >
-        <span class="text-[11px] text-[var(--text-200)]"
-          >{{ itemsNarrados.length }} ítem{{ itemsNarrados.length !== 1 ? 's' : '' }} en total</span
+    <!-- Filtros -->
+    <div
+      class="flex flex-wrap items-end gap-4 rounded-2xl border border-[var(--bg-300)]/50 bg-white px-4 py-3 shadow-sm sm:px-6"
+    >
+      <label class="flex items-center gap-2">
+        <span class="text-sm font-medium text-[var(--text-200)]">Negocio:</span>
+        <select
+          v-model="localSeleccionado"
+          class="rounded-lg border border-[var(--bg-300)] bg-[var(--bg-100)] px-2.5 py-1.5 text-sm font-semibold text-[var(--text-100)] focus:outline-none focus:ring-2 focus:ring-rose-400"
         >
+          <option :value="null">Todos los negocios</option>
+          <option v-for="l in locales" :key="l.id ?? l.nombre" :value="l.id">
+            {{ l.nombre }}
+          </option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2">
+        <span class="text-sm font-medium text-[var(--text-200)]">Fecha:</span>
+        <input
+          v-model="fechaSeleccionada"
+          type="date"
+          class="rounded-lg border border-[var(--bg-300)] bg-[var(--bg-100)] px-2.5 py-1.5 text-sm font-semibold text-[var(--text-100)] focus:outline-none focus:ring-2 focus:ring-rose-400"
+        />
+      </label>
+      <!-- Botones fecha rápida -->
+      <div class="flex gap-2">
         <button
+          v-for="[label, dias] in [
+            ['Hoy', 0],
+            ['Ayer', -1],
+            ['Antier', -2],
+          ] as [string, number][]"
+          :key="label"
           type="button"
-          class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors"
+          class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors"
           :class="
-            ordenUrgente
-              ? 'border-red-300 bg-red-600 text-white'
-              : 'border-[var(--bg-300)] bg-white text-[var(--text-200)] hover:bg-red-50 hover:text-red-700'
+            esFechaRapida(dias)
+              ? 'border-rose-300 bg-rose-100 text-rose-700'
+              : 'border-[var(--bg-300)] bg-white text-[var(--text-100)] hover:bg-[var(--bg-100)]'
           "
-          @click="ordenUrgente = !ordenUrgente"
+          @click="setFechaRapida(dias)"
         >
-          ⚠️ {{ ordenUrgente ? 'Orden: urgentes primero' : 'Ver urgentes primero' }}
+          {{ label }}
         </button>
+      </div>
+    </div>
+
+    <!-- Lista de compras -->
+    <div
+      class="relative mx-auto max-w-xl overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/60 shadow-sm"
+    >
+      <!-- Encabezado "Por comprar" dentro de la tarjeta -->
+      <div
+        v-if="!cargando && itemsOrdenados.length > 0"
+        class="flex items-center justify-between border-b border-dashed border-amber-200 px-5 py-2"
+      >
+        <span class="text-[10px] font-bold uppercase tracking-widest text-amber-500"
+          >Por comprar</span
+        >
+        <span class="text-xs font-bold text-rose-600">{{ porComprar }}</span>
       </div>
 
       <!-- Skeleton -->
-      <div v-if="cargando" class="space-y-2 p-4">
-        <div
-          v-for="n in 5"
-          :key="`sk-${n}`"
-          class="h-5 w-full animate-pulse rounded bg-[var(--bg-200)]"
-        ></div>
+      <div v-if="cargando" class="space-y-3 px-5 py-5">
+        <div v-for="n in 5" :key="n" class="h-5 w-full animate-pulse rounded bg-amber-200/70"></div>
       </div>
 
       <!-- Vacío -->
       <div
-        v-else-if="itemsNarrados.length === 0"
-        class="px-4 py-8 text-center text-sm text-[var(--text-200)]"
+        v-else-if="itemsOrdenados.length === 0"
+        class="px-5 py-10 text-center text-sm text-amber-600"
       >
-        No hay productos para esta lista.
+        ✅ No hay nada que comprar para esta fecha y negocio.
       </div>
 
-      <!-- Tabla -->
-      <table v-else class="w-full">
-        <thead>
-          <tr class="border-b border-[var(--bg-200)] bg-[var(--bg-100)]/50">
-            <th
-              class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Producto
-            </th>
-            <template v-if="tieneDetalle">
-              <th
-                class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
-                title="Cantidad objetivo según plantilla"
-              >
-                Necesitás
-              </th>
-              <th
-                class="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-3 sm:text-xs"
-                title="Cantidad actual en stock según conteo"
-              >
-                Tenés
-              </th>
-            </template>
-            <th
-              class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--text-200)] sm:px-4 sm:text-xs"
-            >
-              Comprá
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="it in itemsOrdenados"
-            :key="`item-${it.producto_id}`"
-            class="border-b border-[var(--bg-200)] last:border-0 transition-colors"
-            :class="(Number(it.cantidad_a_comprar) || 0) <= 0 ? 'bg-emerald-50/60 opacity-60' : ''"
+      <!-- Pendientes -->
+      <ul v-else class="px-5 py-3">
+        <li
+          v-for="it in pendientes"
+          :key="`p-${it.producto_id}`"
+          class="relative flex cursor-pointer items-start gap-3 border-b border-amber-100 py-2.5 last:border-0"
+          :class="animando.has(it.producto_id) ? 'opacity-60' : 'hover:bg-amber-100/50'"
+          @click="toggleMarcado(it.producto_id)"
+        >
+          <!-- Checkbox -->
+          <div
+            class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors"
+            :class="
+              animando.has(it.producto_id)
+                ? 'border-emerald-400 bg-emerald-100 text-emerald-600'
+                : 'border-amber-400 bg-white'
+            "
           >
-            <td
-              class="px-3 py-2 sm:px-4"
-              :class="
-                (Number(it.cantidad_a_comprar) || 0) <= 0
-                  ? 'text-emerald-700'
-                  : 'text-[var(--text-100)]'
-              "
+            <svg
+              v-if="animando.has(it.producto_id)"
+              width="11"
+              height="9"
+              viewBox="0 0 11 9"
+              fill="none"
             >
-              <span
-                class="block text-sm font-medium"
-                :class="
-                  (Number(it.cantidad_a_comprar) || 0) <= 0
-                    ? 'line-through decoration-emerald-400/70'
-                    : ''
-                "
-                >{{ it.producto_nombre }}</span
-              >
-              <span
-                class="block text-[11px]"
-                :class="
-                  (Number(it.cantidad_a_comprar) || 0) <= 0
-                    ? 'text-emerald-500'
-                    : 'text-[var(--text-200)]'
-                "
-              >
-                {{ it.unidad_medida || '-' }}
-              </span>
-            </td>
-            <template v-if="tieneDetalle">
-              <td
-                class="px-2 py-2 text-right text-xs sm:px-3 sm:text-sm"
-                :class="
-                  (Number(it.cantidad_a_comprar) || 0) <= 0
-                    ? 'text-emerald-600'
-                    : 'text-[var(--text-200)]'
-                "
-              >
-                {{ formatNum(it.cantidad_objetivo) }}
-              </td>
-              <td
-                class="px-2 py-2 text-right text-xs sm:px-3 sm:text-sm"
-                :class="
-                  (Number(it.cantidad_a_comprar) || 0) <= 0
-                    ? 'text-emerald-600'
-                    : 'text-[var(--text-200)]'
-                "
-              >
-                {{ formatNum(it.cantidad_actual) }}
-              </td>
-            </template>
-            <td class="px-3 py-2 text-right sm:px-4">
-              <span
-                class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold sm:px-2.5 sm:py-1 sm:text-sm"
-                :class="colorBadge(it)"
-              >
-                {{
-                  (Number(it.cantidad_a_comprar) || 0) <= 0 ? '✓' : formatNum(it.cantidad_a_comprar)
-                }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <path
+                d="M1 4.5L4 7.5L10 1"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          <span
+            class="text-[15px] leading-snug transition-all"
+            :class="
+              animando.has(it.producto_id)
+                ? 'text-amber-700 line-through decoration-amber-400'
+                : 'text-amber-950'
+            "
+          >
+            <span class="font-bold">{{ formatNum(it.cantidad_a_comprar) }}</span>
+            <span
+              class="mx-1 text-sm"
+              :class="animando.has(it.producto_id) ? '' : 'text-amber-600'"
+              >{{ it.unidad_medida || 'u.' }}</span
+            >
+            de {{ it.producto_nombre }}
+          </span>
+          <!-- Barra de progreso (solo cuando anima) -->
+          <div
+            v-if="animando.has(it.producto_id)"
+            class="absolute bottom-0 left-0 right-0 h-0.5 origin-left rounded bg-emerald-400"
+            style="animation: shrink-bar 3s linear forwards"
+          ></div>
+        </li>
+      </ul>
+
+      <!-- Separador comprados -->
+      <div
+        v-if="comprados.length > 0"
+        class="mx-5 border-t border-dashed border-amber-300 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-500"
+      >
+        Ya comprado
+      </div>
+
+      <!-- Comprados (tachados) -->
+      <ul v-if="comprados.length > 0" class="px-5 pb-2">
+        <li
+          v-for="it in comprados"
+          :key="`c-${it.producto_id}`"
+          class="flex cursor-pointer items-start gap-3 border-b border-amber-100 py-2 last:border-0 opacity-50 hover:opacity-70"
+          @click="toggleMarcado(it.producto_id)"
+        >
+          <!-- Checkbox marcado -->
+          <div
+            class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 border-emerald-400 bg-emerald-100 text-emerald-600"
+          >
+            <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+              <path
+                d="M1 4.5L4 7.5L10 1"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          <span class="text-[15px] leading-snug text-amber-700 line-through decoration-amber-400">
+            <span class="font-bold">{{ formatNum(it.cantidad_a_comprar) }}</span>
+            <span class="mx-1 text-sm">{{ it.unidad_medida || 'u.' }}</span>
+            de {{ it.producto_nombre }}
+          </span>
+        </li>
+      </ul>
+
+      <!-- Pie -->
+      <div class="border-t border-amber-200 px-5 py-2.5 text-right text-xs text-amber-500">
+        {{ comprados.length }} de {{ itemsOrdenados.length }} comprados
+      </div>
     </div>
+
+    <!-- Aviso referencia temporal -->
+    <p class="mx-auto max-w-xl text-center text-xs text-[var(--text-200)]">
+      ✏️ Los tachados son solo una referencia visual para ayudarte durante la compra. Se guardan
+      solo en este dispositivo y no afectan ningún registro del sistema.
+    </p>
   </div>
 </template>
+
+<style scoped>
+@keyframes shrink-bar {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+</style>
